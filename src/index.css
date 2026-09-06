@@ -1,0 +1,314 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   CloudGuard design tokens — the source of truth for the DOM.
+   `src/design/tokens.ts` mirrors the values Three.js and Recharts need as
+   typed hex constants. Change a colour here and there, nowhere else.
+
+   Dark is the primary experience. The light theme is a *selected* set of
+   steps against a light surface, not an inversion of the dark one.
+   ========================================================================== */
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Planes — Deep Navy / Almost Black */
+  --canvas: #020617; /* Slate 950 */
+  --canvas-glow: #0f172a; /* Slate 900 for radial glow */
+  
+  /* Surfaces — Dark Navy/Charcoal */
+  --surface-1: #0f172a; /* Slate 900 */
+  --surface-2: #1e293b; /* Slate 800 */
+  --surface-3: #334155; /* Slate 700 */
+  --surface-inset: #020617;
+
+  /* Hairlines — Thin, low contrast borders */
+  --line-subtle: rgba(255, 255, 255, 0.03);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.15);
+  --line-glow: rgba(59, 130, 246, 0.3);
+
+  /* Ink — Modern, readable hierarchy */
+  --text-1: #f8fafc; /* Slate 50 */
+  --text-2: #cbd5e1; /* Slate 300 */
+  --text-3: #94a3b8; /* Slate 400 */
+  --text-4: #64748b; /* Slate 500 */
+  --text-inverse: #020617;
+
+  /* Accent — Electric Blue and Violet */
+  --accent-3: rgba(59, 130, 246, 0.1);
+  --accent-6: rgba(59, 130, 246, 0.25);
+  --accent-9: #3b82f6; /* Blue-500 */
+  --accent-10: #60a5fa; /* Blue-400 */
+  --accent-11: #8b5cf6; /* Violet-500 */
+  --accent-12: #a78bfa; /* Violet-400 */
+
+  /* Severity — Muted, professional status colors */
+  --sev-critical: #ef4444; /* Red-500 */
+  --sev-high: #f97316;    /* Orange-500 */
+  --sev-medium: #f59e0b;  /* Amber-500 */
+  --sev-low: #3b82f6;     /* Blue-500 */
+  --sev-secure: #10b981;  /* Emerald-500 */
+
+  --sev-critical-ink: #fca5a5;
+  --sev-high-ink: #fdba74;
+  --sev-medium-ink: #fcd34d;
+  --sev-low-ink: #93c5fd;
+  --sev-secure-ink: #6ee7b7;
+
+  --grid: rgba(255, 255, 255, 0.03);
+
+  /* Depth — Realistic elevation and soft ambient lighting */
+  --rim: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  --elev-1: 0 2px 4px -1px rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+  --elev-2: 0 6px 10px -2px rgba(0, 0, 0, 0.4), 0 3px 6px -3px rgba(0, 0, 0, 0.3);
+  --elev-3: 0 12px 20px -4px rgba(0, 0, 0, 0.5), 0 4px 8px -4px rgba(0, 0, 0, 0.4);
+  --elev-4: 0 25px 40px -10px rgba(0, 0, 0, 0.7), 0 10px 15px -8px rgba(0, 0, 0, 0.5);
+
+  --glow-primary: 0 4px 14px 0 rgba(59, 130, 246, 0.25);
+  --glow-subtle: 0 0 12px 0 rgba(59, 130, 246, 0.1);
+
+  /* Scrim behind modals. */
+  --scrim: rgba(2, 6, 23, 0.85);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --canvas: #f7f8fa;
+  --surface-1: #ffffff;
+  --surface-2: #fbfbfd;
+  --surface-3: #f1f3f7;
+  --surface-inset: #eef0f4;
+
+  --line-subtle: rgba(11, 15, 25, 0.06);
+  --line: rgba(11, 15, 25, 0.11);
+  --line-strong: rgba(11, 15, 25, 0.18);
+
+  --text-1: #0c1017;
+  --text-2: #4e5866;
+  --text-3: #6c7686;
+  --text-4: #8b93a1;
+  --text-inverse: #ffffff;
+
+  --accent-3: rgba(52, 83, 217, 0.08);
+  --accent-6: rgba(52, 83, 217, 0.28);
+  --accent-9: #3453d9;
+  --accent-10: #2a45bd;
+  --accent-11: #2c47c4;
+  --accent-12: #16224f;
+
+  --sev-critical: #e5484d;
+  --sev-high: #f08a24;
+  --sev-medium: #e5c158;
+  --sev-low: #7e90a8;
+  --sev-secure: #33a06b;
+
+  /* Darkened for legibility as text on a light plane. */
+  --sev-critical-ink: #b62328;
+  --sev-high-ink: #9a5308;
+  --sev-medium-ink: #7d6410;
+  --sev-low-ink: #566579;
+  --sev-secure-ink: #16744a;
+
+  --grid: rgba(11, 15, 25, 0.07);
+
+  --rim: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  --elev-1: 0 1px 2px rgba(11, 15, 25, 0.05);
+  --elev-2: 0 1px 2px rgba(11, 15, 25, 0.05), 0 6px 16px -6px rgba(11, 15, 25, 0.1);
+  --elev-3: 0 2px 6px rgba(11, 15, 25, 0.06), 0 16px 40px -12px rgba(11, 15, 25, 0.18);
+  --elev-4: 0 4px 10px rgba(11, 15, 25, 0.07), 0 28px 64px -18px rgba(11, 15, 25, 0.24);
+
+  --scrim: rgba(12, 16, 23, 0.42);
+}
+
+/* ========================================================================== */
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* The marketing page drives its own scroll animation; keep it smooth for
+       anchor jumps but let reduced-motion override below. */
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply text-gray-100 font-sans text-base antialiased;
+    background-color: var(--canvas);
+    background-image: radial-gradient(circle at top center, var(--canvas-glow) 0%, var(--canvas) 60%);
+    background-attachment: fixed;
+    font-optical-sizing: auto;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings inherit the tightened tracking from the type scale. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-gray-100 font-semibold;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* One focus treatment, everywhere. */
+  :focus-visible {
+    outline: 2px solid var(--accent-10);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Technical values align in columns; display figures never do. */
+  th,
+  td,
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--accent-6);
+    color: var(--text-1);
+  }
+
+  /* Hairline scrollbars — a chrome-coloured gutter cheapens a dark UI. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 8px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-4);
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  /* A panel: the base container of the product surface. Depth comes from the
+     surface step, a hairline, and the rim highlight — not a drop shadow. */
+  .panel {
+    @apply rounded-lg border border-line bg-surface-1 shadow-rim;
+  }
+  .panel-2 {
+    @apply rounded-lg border border-line bg-surface-2 shadow-rim;
+  }
+
+  /* Eyebrow label — 11px, uppercase, wide tracking. Used for section and
+     metric labels throughout. */
+  .eyebrow {
+    @apply text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500;
+  }
+
+  /* A hairline that fades at both ends — used to separate hero sections
+     without drawing a hard rule across the viewport. */
+  .rule-fade {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--line) 15%,
+      var(--line) 85%,
+      transparent
+    );
+  }
+
+  /* Blueprint grid backdrop for 3D scenes and marketing sections. Two
+     hairline grids at different scales, masked to fade outward. */
+  .blueprint {
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .blueprint-fade {
+    mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 25%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 25%, transparent 78%);
+  }
+}
+
+@layer utilities {
+  /* Refetch state: hold the previous render at reduced opacity rather than
+     flashing a skeleton and jumping the layout. */
+  .is-stale {
+    @apply pointer-events-none opacity-50 transition-opacity duration-base;
+  }
+
+  /* Clip a long resource ARN/id without a layout-shifting tooltip. */
+  .truncate-mid {
+    @apply block overflow-hidden text-ellipsis whitespace-nowrap;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  /* 3D Interactive Classes (Level 3) */
+  .hover-lift {
+    @apply transition-all duration-300;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elev-2);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Recharts injects focus rings on every SVG surface. */
+.recharts-wrapper:focus,
+.recharts-surface:focus,
+.recharts-sector:focus,
+.recharts-dot:focus,
+.recharts-layer:focus {
+  outline: none;
+}
+
+/* R3F canvases must never trap the page scroll on touch. */
+canvas {
+  touch-action: pan-y;
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
