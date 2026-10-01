@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database.dependencies import get_db
+from app.core.database import get_db
 from app.repositories.scan import scan_repo
 from app.schemas.dashboard import DashboardSummary, TopRiskFinding
 

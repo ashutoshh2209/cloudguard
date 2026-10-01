@@ -1,4 +1,4 @@
-from app.database.base import Base
+from app.core.database import Base
 from app.models.aws_connection import AWSConnection
 from app.models.scan import Scan
 from app.models.resource import CloudResource

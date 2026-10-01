@@ -18,7 +18,7 @@ export interface SecurityScan {
 }
 
 export interface Finding {
-  id: string;
+  finding_id: string;
   rule_id: string;
   title: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
@@ -134,7 +134,7 @@ export interface SecurityReportDetail {
     low: number;
     info: number;
   };
-  top_findings: SecurityFinding[];
+  top_findings: Finding[];
 }
 
 export interface FindingExplanation {

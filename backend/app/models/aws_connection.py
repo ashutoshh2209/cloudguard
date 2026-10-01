@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime
-from app.database.base import Base
+from app.core.database import Base
 
 class AWSConnection(Base):
     __tablename__ = "aws_connections"

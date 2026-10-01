@@ -8,12 +8,12 @@ import { fetchApi } from '../api/client';
 import { SecurityScan } from '../types/api';
 
 interface CloudResource {
-  id: str;
-  scan_id: str;
-  resource_type: str;
-  resource_id: str;
-  resource_name: str;
-  region: str;
+  id: string;
+  scan_id: string;
+  resource_type: string;
+  resource_id: string;
+  resource_name: string;
+  region: string;
   details: any;
 }
 

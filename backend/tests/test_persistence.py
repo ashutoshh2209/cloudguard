@@ -13,7 +13,7 @@ from app.models.finding import Finding
 from app.models.check_result import CheckResult
 from app.models.category_score import CategoryScore
 from app.models import Base
-from app.database.dependencies import get_db
+from app.core.database import get_db
 
 # Create a file-based SQLite database for testing to avoid connection scoping issues
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Any
 
-from app.database.dependencies import get_db
+from app.core.database import get_db
 from app.ai.schemas import FindingExplanation, ScanAISummary, CopilotRequest, CopilotResponse
 from app.ai.service import explain_finding, summarize_scan, ask_copilot
 from app.ai.exceptions import AIError

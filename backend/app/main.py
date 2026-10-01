@@ -77,6 +77,12 @@ async def root():
 
 @app.on_event("startup")
 async def startup_event():
+    # Create all database tables if they don't exist
+    from app.core.database import Base
+    from app.core.database import engine
+    import app.models  # noqa: F401 — Ensures all models are registered with Base
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables verified/created")
     logger.info(f"Starting up {settings.APP_NAME} v{settings.APP_VERSION}")
 
 @app.on_event("shutdown")

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from app.database.dependencies import get_db
+from app.core.database import get_db
 from app.repositories.resource import resource_repo
 # Assuming we don't have a specific Pydantic schema for CloudResource output yet, we can return generic dicts or define one.
 

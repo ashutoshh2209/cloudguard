@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Any
 
-from app.database.dependencies import get_db
+from app.core.database import get_db
 from app.schemas.report import SecurityReportCreate, SecurityReportResponse, SecurityReportList
 from app.reports.service import generate_report_summary, get_report_details
 from app.reports.pdf import generate_pdf

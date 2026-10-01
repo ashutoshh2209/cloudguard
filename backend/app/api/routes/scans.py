@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
-from app.database.dependencies import get_db
+from app.core.database import get_db
 from app.scanner.manager import scan_manager
 from app.findings.schemas import Finding, ScanResult, ScanStatusInfo
 from app.repositories.scan import scan_repo

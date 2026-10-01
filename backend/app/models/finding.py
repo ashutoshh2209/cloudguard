@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from app.database.base import Base
+from app.core.database import Base
 
 # Portable JSON type
 PortableJSON = JSON().with_variant(JSONB, 'postgresql')

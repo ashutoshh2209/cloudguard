@@ -126,7 +126,7 @@ export function ReportDetail() {
           <h2 className="text-xl font-bold text-content mb-4">Top Findings</h2>
           <div className="space-y-4">
             {top_findings.map((f, i) => (
-              <Card key={f.id} className="p-4 flex gap-4">
+              <Card key={f.finding_id} className="p-4 flex gap-4">
                 <div className="mt-1">
                   {f.severity === 'CRITICAL' || f.severity === 'HIGH' ? (
                     <AlertTriangle className="w-5 h-5 text-severity-critical-ink" />

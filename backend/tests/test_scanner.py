@@ -1,18 +1,51 @@
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from app.main import app
 from app.core.config import settings
+from app.models import Base
+from app.core.database import get_db
+
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def override_get_db():
+    try:
+        db = TestingSessionLocal()
+        yield db
+    finally:
+        db.close()
+
+app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
+
+import pytest
+@pytest.fixture(autouse=True)
+def setup_database():
+    Base.metadata.create_all(bind=engine)
+    db = TestingSessionLocal()
+    from app.repositories.aws_connection import aws_connection_repo
+    aws_connection_repo.create(db, account_id="123456789012", role_arn="arn:aws:iam::123456789012:role/CloudGuard", region="us-east-1")
+    db.commit()
+    db.close()
+    yield
+    Base.metadata.drop_all(bind=engine)
 
 def test_run_scan_without_connection():
     # Ensure no connection exists
     client.post(f"{settings.API_V1_STR}/aws/disconnect")
     
-    response = client.post(f"{settings.API_V1_STR}/scans")
-    assert response.status_code == 400
-    assert "No active AWS connection" in response.json()["detail"]
+    response = client.post(f"{settings.API_V1_STR}/scans", params={"account_id": "000000000000"})
+    assert response.status_code == 404
+    assert "AWS connection not found" in response.json()["detail"]
 
 @patch("app.services.aws_connection_service.aws_connection_service.get_client_factory")
 @patch("app.services.aws_connection_service.aws_connection_service.get_status")
@@ -75,12 +108,12 @@ def test_run_scan_success(mock_run_discovery, mock_get_status, mock_get_client_f
     mock_factory.create_client.side_effect = create_client_override
 
     # Trigger scan
-    response = client.post(f"{settings.API_V1_STR}/scans")
+    response = client.post(f"{settings.API_V1_STR}/scans", params={"account_id": "123456789012"})
     
     assert response.status_code == 200
     data = response.json()
     
-    assert data["status"] == "completed"
+    assert data["status"] == "COMPLETED"
     assert data["account_id"] == "123456789012"
     assert data["summary"]["resources_scanned"] == 4
     
@@ -102,7 +135,7 @@ def test_run_scan_success(mock_run_discovery, mock_get_status, mock_get_client_f
     # Test get scan status
     status_response = client.get(f"{settings.API_V1_STR}/scans/{scan_id}")
     assert status_response.status_code == 200
-    assert status_response.json()["status"] == "completed"
+    assert status_response.json()["status"] == "COMPLETED"
     
     # Test list findings
     findings_response = client.get(f"{settings.API_V1_STR}/scans/findings/?severity=CRITICAL")

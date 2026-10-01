@@ -1,7 +1,7 @@
 import uuid
 from sqlalchemy import Column, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database.base import Base
+from app.core.database import Base
 
 class CategoryScore(Base):
     __tablename__ = "category_scores"

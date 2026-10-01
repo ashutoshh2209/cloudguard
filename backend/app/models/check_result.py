@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database.base import Base
+from app.core.database import Base
 
 class CheckResult(Base):
     __tablename__ = "check_results"
