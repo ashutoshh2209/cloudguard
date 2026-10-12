@@ -1,7 +1,8 @@
-import React from 'react';
-import { Search, Bell, Shield, ChevronDown, User, Activity, Menu } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, Bell, Shield, ChevronDown, User, Activity, Menu, LogOut } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/Button';
+import { useAuth } from '../context/AuthContext';
 
 interface TopBarProps {
   onOpenCopilot?: () => void;
@@ -9,7 +10,36 @@ interface TopBarProps {
 
 export function TopBar({ onOpenCopilot }: TopBarProps) {
   const location = useLocation();
-  
+  const navigate = useNavigate();
+  const { user, activeWorkspace, logout } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    setProfileOpen(false);
+    await logout();
+    navigate('/login');
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'CG';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   return (
     <header className="h-16 bg-canvas border-b border-line flex items-center justify-between px-4 md:px-8 sticky top-0 z-20">
       
@@ -31,10 +61,10 @@ export function TopBar({ onOpenCopilot }: TopBarProps) {
         <div className="h-4 w-px bg-line hidden md:block" />
         
         <div className="hidden lg:flex items-center gap-2 text-[13px]">
-          <span className="text-content-muted font-bold uppercase tracking-wider text-[11px]">Env:</span>
+          <span className="text-content-muted font-bold uppercase tracking-wider text-[11px]">Workspace:</span>
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-2 border border-line shadow-sm">
             <span className="w-2 h-2 rounded-full bg-severity-secure shadow-[0_0_6px_rgba(16,185,129,0.4)]" />
-            <span className="text-content font-medium">Production (us-east-1)</span>
+            <span className="text-content font-medium">{activeWorkspace?.name || 'Personal Workspace'}</span>
           </div>
         </div>
       </div>
@@ -65,16 +95,37 @@ export function TopBar({ onOpenCopilot }: TopBarProps) {
 
         <div className="h-4 w-px bg-line" />
 
-        <button className="flex items-center gap-2 hover:bg-surface-2 p-1 md:pr-2 rounded-lg border border-transparent hover:border-line transition-all">
-          <div className="w-8 h-8 rounded bg-gradient-to-tr from-accent-9 to-accent-11 flex items-center justify-center shadow-sm">
-            <span className="text-[12px] font-bold text-white">AK</span>
-          </div>
-          <div className="hidden md:flex flex-col items-start ml-1">
-            <span className="text-[13px] font-bold text-content leading-tight">Admin User</span>
-            <span className="text-[11px] font-medium text-content-secondary leading-tight">SecOps Team</span>
-          </div>
-          <ChevronDown className="w-4 h-4 text-content-muted ml-1 hidden md:block" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button 
+            onClick={() => setProfileOpen(!profileOpen)}
+            className="flex items-center gap-2 hover:bg-surface-2 p-1 md:pr-2 rounded-lg border border-transparent hover:border-line transition-all focus:outline-none"
+          >
+            <div className="w-8 h-8 rounded bg-gradient-to-tr from-accent-9 to-accent-11 flex items-center justify-center shadow-sm">
+              <span className="text-[12px] font-bold text-white">{getInitials(user?.name)}</span>
+            </div>
+            <div className="hidden md:flex flex-col items-start ml-1">
+              <span className="text-[13px] font-bold text-content leading-tight">{user?.name || 'Admin User'}</span>
+              <span className="text-[11px] font-medium text-content-secondary leading-tight">{user?.email || 'SecOps Team'}</span>
+            </div>
+            <ChevronDown className="w-4 h-4 text-content-muted ml-1 hidden md:block" />
+          </button>
+
+          {profileOpen && (
+            <div className="absolute right-0 mt-2 w-56 rounded-lg bg-surface-1 border border-line shadow-lg py-1.5 z-50">
+              <div className="px-4 py-2 border-b border-line">
+                <p className="text-[13px] font-semibold text-content truncate">{user?.name || 'User'}</p>
+                <p className="text-[11px] text-content-secondary truncate">{user?.email}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-severity-critical-ink hover:bg-surface-2 transition-colors text-left"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log out</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
     </header>

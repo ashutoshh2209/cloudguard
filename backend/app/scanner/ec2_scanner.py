@@ -62,6 +62,7 @@ class EC2Scanner(ServiceScanner):
                 evidence = rule.evaluate(sg, context)
                 if evidence:
                     total_failed += 1
+                    evidence_dict = evidence.evidence if hasattr(evidence, "evidence") and isinstance(evidence.evidence, dict) else (dict(evidence) if isinstance(evidence, dict) else {})
                     import uuid
                     finding_id = str(uuid.uuid4())
                     findings.append(
@@ -76,7 +77,7 @@ class EC2Scanner(ServiceScanner):
                             region=self.region,
                             category=rule.category,
                             description=rule.description,
-                            evidence=evidence,
+                            evidence=evidence_dict,
                             recommendation=rule.recommendation
                         )
                     )

@@ -11,6 +11,8 @@ export function ReportDetail() {
   const [details, setDetails] = useState<SecurityReportDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [downloading, setDownloading] = useState(false);
+
   useEffect(() => {
     if (id) {
       loadReport(id);
@@ -32,9 +34,13 @@ export function ReportDetail() {
   const handleDownload = async () => {
     if (!id) return;
     try {
+      setDownloading(true);
       await reportsApi.downloadReport(id);
     } catch (err) {
       console.error('Download failed', err);
+      alert('Failed to download report PDF');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -68,8 +74,12 @@ export function ReportDetail() {
           <p className="text-[14px] text-content-secondary mt-1">Generated: {new Date(report.generated_at).toLocaleString()}</p>
         </div>
         <div className="ml-auto">
-          <Button variant="primary" onClick={handleDownload}>
-            <Download className="w-4 h-4 mr-2" />
+          <Button variant="primary" onClick={handleDownload} disabled={downloading}>
+            {downloading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
             Download PDF
           </Button>
         </div>
@@ -120,6 +130,28 @@ export function ReportDetail() {
           </div>
         ))}
       </div>
+
+      {category_scores && category_scores.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-content mb-4">Category Scores</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {category_scores.map((cs) => (
+              <Card key={cs.category} className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-sm uppercase text-content">{cs.category}</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                    cs.status === 'SECURE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
+                  }`}>
+                    {cs.status}
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-content font-mono">{cs.score} / 100</div>
+                <div className="text-xs text-content-muted mt-1">{cs.finding_count} findings ({cs.critical_count} crit, {cs.high_count} high)</div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {top_findings.length > 0 && (
         <>

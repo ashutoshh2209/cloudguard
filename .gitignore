@@ -1,7 +1,7 @@
-# Frontend (React/Vite)
-frontend/node_modules/
-frontend/dist/
-frontend/dist-ssr/
+node_modules/
+dist/
+dist-ssr/
+.vite/
 *.local
 
 # Python/FastAPI Backend
@@ -16,6 +16,11 @@ env/
 .coverage
 htmlcov/
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # Editor directories and files
 .idea

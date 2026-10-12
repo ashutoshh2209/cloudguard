@@ -21,3 +21,12 @@ class AWSConnectionError(CloudGuardAWSError):
 class AWSRegionError(CloudGuardAWSError):
     """Raised when an invalid region is provided."""
     pass
+
+class AWSThrottlingError(CloudGuardAWSError):
+    """Raised when AWS API requests are throttled."""
+    pass
+
+class AWSInvalidConfigurationError(CloudGuardAWSError):
+    """Raised when AWS configuration or trust relationship is invalid."""
+    pass
+

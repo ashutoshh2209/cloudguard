@@ -5,7 +5,10 @@ from app.aws.exceptions import (
     AWSAuthenticationError,
     AWSAccessDeniedError,
     AWSConnectionError,
-    AWSRegionError
+    AWSRegionError,
+    AWSThrottlingError,
+    AWSInvalidConfigurationError,
+    InvalidRoleArnError
 )
 from app.core.config import settings
 
@@ -14,11 +17,18 @@ def handle_boto3_errors(func):
         try:
             return func(*args, **kwargs)
         except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code")
-            if error_code == "AccessDenied":
+            error_code = e.response.get("Error", {}).get("Code", "")
+            error_msg = e.response.get("Error", {}).get("Message", str(e))
+            if error_code in ("AccessDenied", "UnauthorizedOperation"):
                 raise AWSAccessDeniedError("CloudGuard is not authorized to assume this AWS IAM role")
-            elif error_code == "InvalidClientTokenId" or error_code == "ExpiredToken":
+            elif error_code in ("InvalidParameterValue", "ValidationError"):
+                raise InvalidRoleArnError(f"Invalid AWS parameter: {error_msg}")
+            elif error_code in ("MalformedPolicyDocument", "InvalidIdentityToken"):
+                raise AWSInvalidConfigurationError(f"Invalid AWS role configuration or trust policy: {error_msg}")
+            elif error_code in ("InvalidClientTokenId", "ExpiredToken"):
                 raise AWSAuthenticationError("AWS credentials are invalid or expired")
+            elif error_code in ("Throttling", "ThrottlingException", "RequestLimitExceeded", "RequestThrottled"):
+                raise AWSThrottlingError(f"AWS STS request throttled: {error_msg}")
             else:
                 raise AWSConnectionError(f"AWS ClientError: {error_code}")
         except (NoCredentialsError, PartialCredentialsError):
@@ -29,12 +39,14 @@ def handle_boto3_errors(func):
             if "Invalid endpoint" in str(e) or "region" in str(e).lower():
                 raise AWSRegionError("Invalid AWS region provided")
             raise AWSConnectionError(str(e))
+        except (AWSAccessDeniedError, AWSAuthenticationError, AWSRegionError, AWSThrottlingError, AWSInvalidConfigurationError, InvalidRoleArnError, AWSConnectionError):
+            raise
         except Exception as e:
             raise AWSConnectionError(f"Unexpected AWS error: {str(e)}")
     return wrapper
 
 @handle_boto3_errors
-def assume_role(role_arn: str, region: str) -> dict:
+def assume_role(role_arn: str, region: str, external_id: str | None = None) -> dict:
     """
     Assumes the specified IAM role and returns temporary credentials.
     """
@@ -45,8 +57,9 @@ def assume_role(role_arn: str, region: str) -> dict:
         "RoleSessionName": settings.AWS_ROLE_SESSION_NAME,
     }
     
-    if settings.CLOUDGUARD_EXTERNAL_ID:
-        assume_role_kwargs["ExternalId"] = settings.CLOUDGUARD_EXTERNAL_ID
+    ext_id = external_id or settings.CLOUDGUARD_EXTERNAL_ID
+    if ext_id:
+        assume_role_kwargs["ExternalId"] = ext_id
         
     response = sts_client.assume_role(**assume_role_kwargs)
     return response["Credentials"]

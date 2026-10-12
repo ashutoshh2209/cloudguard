@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] | str = []
     
+    # Auth & JWT Config
+    JWT_SECRET: str = "cloudguard-secret-key-change-in-env-production-2026"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    
     # AI Copilot Config
     AI_ENABLED: bool = False
     AI_PROVIDER: str = "openai" # "openai" or "mock"
@@ -39,6 +44,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
 settings = Settings()

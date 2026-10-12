@@ -3,13 +3,19 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from typing import Generator
 from app.core.config import settings
 
-# Configure engine for PostgreSQL
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-)
+# Configure engine based on database dialect
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        settings.DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(
+        settings.DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=20,
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

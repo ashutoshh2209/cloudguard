@@ -29,13 +29,10 @@ class ServiceScanner(ABC):
         passed_count = 0
         failed_count = 0
         for rule in self.rules:
-            # We filter rules if they don't match the current resource_type.
-            # EC2Scanner changes self.service temporarily, but resource_type is safer if set properly,
-            # though in our setup we ensure correct rule list is passed or evaluated.
-            evidence = rule.evaluate(resource_data, context)
-            if evidence:
+            res = rule.evaluate(resource_data, context)
+            if res:
                 failed_count += 1
-                # Deduplication logic could be handled by unique ID creation here
+                evidence_dict = res.evidence if hasattr(res, "evidence") and isinstance(res.evidence, dict) else (dict(res) if isinstance(res, dict) else {})
                 finding_id = str(uuid.uuid4())
                 findings.append(
                     Finding(
@@ -49,7 +46,7 @@ class ServiceScanner(ABC):
                         region=self.region,
                         category=rule.category,
                         description=rule.description,
-                        evidence=evidence,
+                        evidence=evidence_dict,
                         recommendation=rule.recommendation
                     )
                 )

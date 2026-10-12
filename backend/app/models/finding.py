@@ -13,6 +13,7 @@ class Finding(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     scan_id = Column(String, ForeignKey("scans.id"), nullable=False, index=True)
+    workspace_id = Column(String, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     resource_id = Column(String, nullable=False)
     rule_id = Column(String, nullable=False, index=True)
     
@@ -20,6 +21,8 @@ class Finding(Base):
     description = Column(String, nullable=True)
     severity = Column(String, nullable=False, index=True)
     category = Column(String, nullable=False, index=True)
+    service = Column(String, nullable=True, index=True)
+    region = Column(String, nullable=True, index=True)
     
     risk_score = Column(Integer, nullable=True, index=True)
     priority = Column(String, nullable=True)
@@ -29,8 +32,10 @@ class Finding(Base):
     evidence = Column(PortableJSON, nullable=True)
     risk_factors = Column(PortableJSON, nullable=True)
     
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     detected_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     scan = relationship("Scan", back_populates="findings")
+    workspace = relationship("Workspace", back_populates="findings")

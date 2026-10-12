@@ -11,20 +11,26 @@ class CloudResource(Base):
     __tablename__ = "resources"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    scan_id = Column(String, ForeignKey("scans.id"), nullable=False, index=True)
-    aws_connection_id = Column(String, ForeignKey("aws_connections.id"), nullable=False)
+    workspace_id = Column(String, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    aws_connection_id = Column(String, ForeignKey("aws_connections.id", ondelete="CASCADE"), nullable=True, index=True)
+    scan_id = Column(String, ForeignKey("scans.id"), nullable=True, index=True)
     
-    resource_id = Column(String, nullable=False)
-    resource_type = Column(String, nullable=False, index=True)
     service = Column(String, nullable=False, index=True)
+    resource_type = Column(String, nullable=False, index=True)
+    resource_id = Column(String, nullable=False, index=True)
+    resource_name = Column(String, nullable=True)
     name = Column(String, nullable=True)
     region = Column(String, nullable=False, index=True)
+    arn = Column(String, nullable=True, index=True)
     
     status = Column(String, nullable=False, default="active")
     
-    metadata_json = Column(PortableJSON, nullable=True) # Using PortableJSON for flexible AWS metadata
+    metadata_json = Column(PortableJSON, nullable=True)
     
-    discovered_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    discovered_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationships
+    workspace = relationship("Workspace", back_populates="resources")
+    aws_connection = relationship("AWSConnection", backref="resources")
     scan = relationship("Scan", back_populates="resources")

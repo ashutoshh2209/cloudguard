@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -6,11 +7,24 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.api import api_router
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create all database tables if they don't exist
+    from app.core.database import Base
+    from app.core.database import engine
+    import app.models  # noqa: F401 — Ensures all models are registered with Base
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables verified/created")
+    logger.info(f"Starting up {settings.APP_NAME} v{settings.APP_VERSION}")
+    yield
+    logger.info("Shutting down application")
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="CloudGuard - Enterprise cloud security scanner API",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
 
 # Set up CORS middleware
@@ -29,7 +43,9 @@ from app.aws.exceptions import (
     AWSAuthenticationError,
     AWSAccessDeniedError,
     AWSConnectionError,
-    AWSRegionError
+    AWSRegionError,
+    AWSThrottlingError,
+    AWSInvalidConfigurationError
 )
 
 @app.exception_handler(InvalidRoleArnError)
@@ -47,6 +63,14 @@ async def aws_authentication_exception_handler(request: Request, exc: AWSAuthent
 @app.exception_handler(AWSRegionError)
 async def aws_region_exception_handler(request: Request, exc: AWSRegionError):
     return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+@app.exception_handler(AWSInvalidConfigurationError)
+async def aws_invalid_configuration_exception_handler(request: Request, exc: AWSInvalidConfigurationError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+@app.exception_handler(AWSThrottlingError)
+async def aws_throttling_exception_handler(request: Request, exc: AWSThrottlingError):
+    return JSONResponse(status_code=429, content={"detail": str(exc)})
 
 @app.exception_handler(AWSConnectionError)
 async def aws_connection_exception_handler(request: Request, exc: AWSConnectionError):
@@ -75,16 +99,4 @@ async def root():
         "message": "CloudGuard backend is running"
     }
 
-@app.on_event("startup")
-async def startup_event():
-    # Create all database tables if they don't exist
-    from app.core.database import Base
-    from app.core.database import engine
-    import app.models  # noqa: F401 — Ensures all models are registered with Base
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables verified/created")
-    logger.info(f"Starting up {settings.APP_NAME} v{settings.APP_VERSION}")
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Shutting down application")

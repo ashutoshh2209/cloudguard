@@ -104,6 +104,9 @@ export function Register() {
                   placeholder="••••••••"
                 />
               </div>
+              <p className="mt-1 text-xs text-content-muted">
+                Must be at least 8 characters with letters and numbers/special characters.
+              </p>
             </div>
 
             <div>

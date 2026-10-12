@@ -3,6 +3,7 @@ import { X, Send, Sparkles, Loader2, Bot, User } from 'lucide-react';
 import { Button } from './ui/Button';
 import { aiApi } from '../api/ai';
 import { CopilotMessage } from '../types/api';
+import { useAuth } from '../context/AuthContext';
 import ReactMarkdown from 'react-markdown';
 
 interface CopilotDrawerProps {
@@ -12,6 +13,7 @@ interface CopilotDrawerProps {
 }
 
 export function CopilotDrawer({ isOpen, onClose, scanId }: CopilotDrawerProps) {
+  const { activeWorkspace } = useAuth();
   const [messages, setMessages] = useState<CopilotMessage[]>([
     { role: 'assistant', content: 'Hello! I am CloudGuard Copilot. Ask me questions about your security posture or findings.' }
   ]);
@@ -25,10 +27,11 @@ export function CopilotDrawer({ isOpen, onClose, scanId }: CopilotDrawerProps) {
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
+  const handleSend = async (messageText?: string) => {
+    const textToSend = (messageText || input).trim();
+    if (!textToSend || loading) return;
     
-    const userMessage: CopilotMessage = { role: 'user', content: input.trim() };
+    const userMessage: CopilotMessage = { role: 'user', content: textToSend };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
@@ -38,6 +41,7 @@ export function CopilotDrawer({ isOpen, onClose, scanId }: CopilotDrawerProps) {
       const response = await aiApi.askCopilot({
         message: userMessage.content,
         scan_id: scanId,
+        workspace_id: activeWorkspace?.id,
         history: messages
       });
       
@@ -128,6 +132,34 @@ export function CopilotDrawer({ isOpen, onClose, scanId }: CopilotDrawerProps) {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Quick prompt chips */}
+        <div className="px-4 py-2 border-t border-line bg-surface-1/50 flex flex-wrap gap-1.5">
+          <button 
+            type="button"
+            onClick={() => handleSend("What are my most critical risks?")}
+            disabled={loading}
+            className="text-[11px] px-2 py-0.5 rounded bg-surface-2 hover:bg-surface-3 text-content-secondary border border-line transition-colors"
+          >
+            Critical risks?
+          </button>
+          <button 
+            type="button"
+            onClick={() => handleSend("Why is my security score low?")}
+            disabled={loading}
+            className="text-[11px] px-2 py-0.5 rounded bg-surface-2 hover:bg-surface-3 text-content-secondary border border-line transition-colors"
+          >
+            Why is score low?
+          </button>
+          <button 
+            type="button"
+            onClick={() => handleSend("What should I fix first?")}
+            disabled={loading}
+            className="text-[11px] px-2 py-0.5 rounded bg-surface-2 hover:bg-surface-3 text-content-secondary border border-line transition-colors"
+          >
+            What to fix first?
+          </button>
+        </div>
+
         {/* Input */}
         <div className="p-4 bg-surface-1 border-t border-line">
           <div className="relative">
@@ -140,7 +172,7 @@ export function CopilotDrawer({ isOpen, onClose, scanId }: CopilotDrawerProps) {
               rows={1}
             />
             <button
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={!input.trim() || loading}
               className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-md text-content-muted hover:text-content hover:bg-surface-3 disabled:opacity-50 transition-colors"
             >

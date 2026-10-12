@@ -10,18 +10,21 @@ class FindingRepository:
             finding = Finding(
                 id=f_data["id"],
                 scan_id=scan_id,
+                workspace_id=f_data.get("workspace_id"),
                 resource_id=f_data["resource_id"],
                 rule_id=f_data["rule_id"],
                 title=f_data["title"],
                 description=f_data.get("description"),
                 severity=f_data["severity"],
                 category=f_data["category"],
+                service=f_data.get("service"),
+                region=f_data.get("region"),
                 risk_score=f_data.get("risk_score"),
                 priority=f_data.get("priority"),
                 status=f_data.get("status", "OPEN"),
                 recommendation=f_data.get("recommendation"),
                 evidence=f_data.get("evidence"),
-                risk_factors=f_data.get("risk_factors")
+                risk_factors=f_data.get("risk_factors"),
             )
             findings.append(finding)
         if findings:

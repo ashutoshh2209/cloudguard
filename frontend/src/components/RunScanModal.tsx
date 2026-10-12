@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Shield, X, CheckCircle2, CircleDashed, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/Button';
 import { fetchApi } from '../api/client';
+import { scansApi, ScanDetailResponse } from '../api/scans';
 import { AWSConnectionStatus, SecurityScan } from '../types/api';
+import { useAuth } from '../context/AuthContext';
 
 interface RunScanModalProps {
   isOpen: boolean;
@@ -10,10 +12,13 @@ interface RunScanModalProps {
 }
 
 export function RunScanModal({ isOpen, onClose }: RunScanModalProps) {
+  const { activeWorkspace } = useAuth();
   const [step, setStep] = useState<'configure' | 'scanning' | 'results'>('configure');
   const [awsStatus, setAwsStatus] = useState<AWSConnectionStatus | null>(null);
   const [scanResult, setScanResult] = useState<SecurityScan | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isViewer = activeWorkspace?.role === 'VIEWER';
 
   useEffect(() => {
     if (isOpen) {
@@ -34,13 +39,26 @@ export function RunScanModal({ isOpen, onClose }: RunScanModalProps) {
   };
 
   const startScan = async () => {
-    if (!awsStatus?.account_id) return;
+    if (isViewer) {
+      setError('Viewer role cannot trigger security scans. Please request Member or Admin access.');
+      return;
+    }
+
     setStep('scanning');
     setError(null);
     try {
-      const result = await fetchApi<SecurityScan>(`/scans?account_id=${awsStatus.account_id}`, {
-        method: 'POST'
-      });
+      let result: SecurityScan;
+      if (activeWorkspace) {
+        result = await scansApi.runScan({
+          workspace_id: activeWorkspace.id,
+        });
+      } else if (awsStatus?.account_id) {
+        result = await scansApi.runScan({
+          account_id: awsStatus.account_id,
+        });
+      } else {
+        throw new Error('No active workspace or AWS connection found to scan.');
+      }
       setScanResult(result);
       setStep('results');
     } catch (err: any) {
@@ -89,9 +107,14 @@ export function RunScanModal({ isOpen, onClose }: RunScanModalProps) {
                 </div>
               )}
               <div>
-                <label className="block text-[12px] font-bold text-content-muted uppercase tracking-wider mb-2">AWS Account</label>
+                <label className="block text-[12px] font-bold text-content-muted uppercase tracking-wider mb-2">Scope & Workspace</label>
                 <div className="px-4 py-3 rounded-lg border border-line bg-surface-2 text-[14px] text-content font-medium flex items-center justify-between">
-                  <span>{awsStatus?.account_id ? `Account: ${awsStatus.account_id}` : 'No AWS Account connected'}</span>
+                  <span>{activeWorkspace ? `Workspace: ${activeWorkspace.name}` : (awsStatus?.account_id ? `Account: ${awsStatus.account_id}` : 'No AWS account or workspace')}</span>
+                  {activeWorkspace?.role && (
+                    <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-surface-3 border border-line text-content-secondary">
+                      {activeWorkspace.role}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -191,7 +214,9 @@ export function RunScanModal({ isOpen, onClose }: RunScanModalProps) {
           {step === 'configure' && (
             <>
               <Button variant="ghost" onClick={onClose}>Cancel</Button>
-              <Button variant="primary" onClick={startScan} disabled={!awsStatus?.account_id}>Start Scan</Button>
+              <Button variant="primary" onClick={startScan} disabled={isViewer || (!activeWorkspace && !awsStatus?.account_id)}>
+                {isViewer ? 'Viewer (Read Only)' : 'Start Scan'}
+              </Button>
             </>
           )}
           {step === 'results' && (

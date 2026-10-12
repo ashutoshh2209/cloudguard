@@ -3,33 +3,63 @@ export interface ScanSummary {
   checks_attempted: number;
   checks_completed: number;
   checks_failed: number;
+  checks_passed?: number;
+  checks_errored?: number;
+  findings?: number;
+  critical?: number;
+  high?: number;
+  medium?: number;
+  low?: number;
+  info?: number;
 }
 
 export interface SecurityScan {
   id: string;
-  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'PARTIAL';
+  scan_id?: string;
+  workspace_id?: string;
+  status: 'PENDING' | 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'PARTIAL';
   started_at: string;
   completed_at?: string;
-  aws_connection_id: string;
+  created_at?: string;
+  aws_connection_id?: string;
+  account_id?: string;
   summary: ScanSummary;
   coverage_percentage: number;
   security_score?: number;
   security_rating?: string;
+  category_scores?: Record<string, CategoryScore>;
+}
+
+export interface ScoreTrendPoint {
+  scan_id: string;
+  date: string;
+  timestamp: string;
+  score: number;
+  rating?: string;
 }
 
 export interface Finding {
   finding_id: string;
+  id?: string;
+  workspace_id?: string;
+  scan_id?: string;
   rule_id: string;
   title: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
   category: string;
+  service?: string;
+  region?: string;
   resource_id: string;
   status: 'OPEN' | 'RESOLVED' | 'IGNORED';
   risk_score: number;
   priority?: string;
   description?: string;
   recommendation?: string;
-  detected_at: string;
+  evidence?: Record<string, any>;
+  risk_factors?: string[];
+  created_at?: string;
+  detected_at?: string;
+  updated_at?: string;
 }
 
 export interface CloudResource {
@@ -70,6 +100,8 @@ export interface DashboardSummary {
   security_score?: number;
   rating: string;
   reason?: string;
+  total_resources?: number;
+  total_findings?: number;
   findings_summary: {
     critical: number;
     high: number;
@@ -80,6 +112,12 @@ export interface DashboardSummary {
   checks_summary?: CheckSummary;
   category_scores: Record<string, CategoryScore>;
   top_risks: TopRiskFinding[];
+  latest_scan_id?: string;
+  latest_scan_status?: string;
+  last_scanned_at?: string;
+  previous_score?: number;
+  score_delta?: number;
+  score_trend?: ScoreTrendPoint[];
 }
 
 export interface AWSConnectionStatus {
@@ -140,6 +178,7 @@ export interface SecurityReportDetail {
 export interface FindingExplanation {
   summary: string;
   why_it_matters: string;
+  potential_impact?: string | null;
   attack_scenario: string | null;
   recommended_actions: string[];
   caveats: string[];
@@ -161,9 +200,13 @@ export interface CopilotMessage {
 export interface CopilotRequest {
   message: string;
   scan_id?: string | null;
+  workspace_id?: string | null;
   history: CopilotMessage[];
 }
 
 export interface CopilotResponse {
   answer: string;
+  provider?: string;
+  scan_id?: string | null;
+  status?: string;
 }

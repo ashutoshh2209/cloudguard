@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Shield, 
   LayoutDashboard, 
@@ -6,16 +6,16 @@ import {
   Server, 
   History, 
   FileText, 
-  CheckCircle,
-  Cloud,
-  Sliders,
-  Puzzle,
-  Settings,
-  HelpCircle,
-  ChevronDown
+  Puzzle, 
+  Settings, 
+  HelpCircle, 
+  ChevronDown,
+  Check,
+  Plus
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../utils/cn';
+import { useAuth } from '../context/AuthContext';
 
 const MAIN_NAV = [
   { name: 'Overview', to: '/app', icon: LayoutDashboard, exact: true },
@@ -27,6 +27,38 @@ const MAIN_NAV = [
 ];
 
 export function Sidebar() {
+  const { activeWorkspace, workspaces, switchWorkspace, createWorkspace } = useAuth();
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setWorkspaceOpen(false);
+        setIsCreating(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleCreateWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWorkspaceName.trim()) return;
+    try {
+      await createWorkspace(newWorkspaceName.trim());
+      setNewWorkspaceName('');
+      setIsCreating(false);
+      setWorkspaceOpen(false);
+    } catch (err) {
+      console.error('Failed to create workspace', err);
+    }
+  };
+
   return (
     <aside className="w-[260px] h-screen bg-surface-1 border-r border-line hidden md:flex flex-col flex-shrink-0 relative z-20">
       
@@ -85,14 +117,99 @@ export function Sidebar() {
           Help & Docs
         </button>
         
-        <div className="mt-4 pt-4 border-t border-line">
-          <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-2 border border-line shadow-sm hover:border-accent-border transition-all text-left group">
-            <div className="flex flex-col">
-              <span className="text-[11px] text-content-muted font-bold mb-0.5 uppercase tracking-wider">Environment</span>
-              <span className="text-[13px] text-content font-semibold group-hover:text-accent-9 transition-colors">Production</span>
+        {/* Workspace Selector */}
+        <div className="mt-4 pt-4 border-t border-line relative" ref={menuRef}>
+          <button 
+            onClick={() => setWorkspaceOpen(!workspaceOpen)}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-2 border border-line shadow-sm hover:border-accent-border transition-all text-left group"
+          >
+            <div className="flex flex-col min-w-0 pr-2">
+              <span className="text-[11px] text-content-muted font-bold mb-0.5 uppercase tracking-wider">
+                Workspace
+              </span>
+              <span className="text-[13px] text-content font-semibold group-hover:text-accent-9 transition-colors truncate">
+                {activeWorkspace?.name || 'Personal Workspace'}
+              </span>
             </div>
-            <ChevronDown className="w-4 h-4 text-content-muted group-hover:text-content-secondary transition-colors" />
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {activeWorkspace?.role && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-1 border border-line text-content-secondary">
+                  {activeWorkspace.role}
+                </span>
+              )}
+              <ChevronDown className="w-4 h-4 text-content-muted group-hover:text-content-secondary transition-colors" />
+            </div>
           </button>
+
+          {workspaceOpen && (
+            <div className="absolute bottom-full left-0 mb-2 w-full rounded-lg bg-surface-1 border border-line shadow-xl py-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-content-muted border-b border-line">
+                Your Workspaces
+              </div>
+              <div className="max-h-48 overflow-y-auto py-1">
+                {workspaces.map((ws) => (
+                  <button
+                    key={ws.id}
+                    onClick={() => {
+                      switchWorkspace(ws.id);
+                      setWorkspaceOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-surface-2 transition-colors",
+                      activeWorkspace?.id === ws.id ? "text-accent-9 font-semibold bg-surface-2/60" : "text-content font-medium"
+                    )}
+                  >
+                    <span className="truncate pr-2">{ws.name}</span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-2 border border-line text-content-secondary">
+                        {ws.role}
+                      </span>
+                      {activeWorkspace?.id === ws.id && <Check className="w-3.5 h-3.5 text-accent-9" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="border-t border-line mt-1 pt-1 px-2">
+                {!isCreating ? (
+                  <button
+                    onClick={() => setIsCreating(true)}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-[12px] font-medium text-accent-9 hover:bg-surface-2 rounded transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create Workspace</span>
+                  </button>
+                ) : (
+                  <form onSubmit={handleCreateWorkspace} className="space-y-1.5 py-1">
+                    <input
+                      type="text"
+                      autoFocus
+                      required
+                      placeholder="Workspace name"
+                      value={newWorkspaceName}
+                      onChange={(e) => setNewWorkspaceName(e.target.value)}
+                      className="w-full bg-surface-2 border border-line rounded px-2 py-1 text-[12px] text-content focus:outline-none focus:border-accent-9"
+                    />
+                    <div className="flex gap-1 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreating(false)}
+                        className="px-2 py-0.5 text-[11px] rounded text-content-secondary hover:bg-surface-2"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-2 py-0.5 text-[11px] rounded bg-accent-9 text-white font-medium hover:bg-accent-10"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       

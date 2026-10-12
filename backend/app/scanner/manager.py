@@ -127,7 +127,7 @@ class ScanManager:
             final_findings.sort(key=lambda x: (x.risk_score or 0), reverse=True)
 
             # Persist findings
-            findings_data = [f.dict() for f in final_findings]
+            findings_data = [f.model_dump() for f in final_findings]
             # Rename finding_id to id for db
             for fd in findings_data:
                 fd["id"] = fd.pop("finding_id")
@@ -184,7 +184,10 @@ class ScanManager:
                 high=sum(1 for f in final_findings if f.severity == "HIGH"),
                 medium=sum(1 for f in final_findings if f.severity == "MEDIUM"),
                 low=sum(1 for f in final_findings if f.severity == "LOW"),
-                info=sum(1 for f in final_findings if f.severity == "INFO")
+                info=sum(1 for f in final_findings if f.severity == "INFO"),
+                checks_attempted=total_passed + total_failed,
+                checks_completed=total_passed + total_failed,
+                checks_failed=total_failed
             )
 
             return ScanResult(
@@ -204,5 +207,9 @@ class ScanManager:
             scan_repo.complete_scan(db, scan_id, status="FAILED")
             db.commit()
             raise HTTPException(status_code=500, detail=str(e))
+
+    def run_workspace_scan(self, db: Session, workspace_id: str, aws_connection_id: str = None, scan_id: str = None):
+        from app.scanner.deterministic_scanner import deterministic_scanner
+        return deterministic_scanner.run_workspace_scan(db, workspace_id, aws_connection_id, scan_id)
 
 scan_manager = ScanManager()

@@ -2,29 +2,35 @@ import { fetchApi } from './client';
 import { SecurityReport, SecurityReportList, SecurityReportDetail } from '../types/api';
 
 export const reportsApi = {
-  listReports: (skip = 0, limit = 50) => 
-    fetchApi<SecurityReportList>(`/reports?skip=${skip}&limit=${limit}`),
+  listReports: (skip = 0, limit = 50, workspaceId?: string) => {
+    const params = new URLSearchParams();
+    params.append('skip', String(skip));
+    params.append('limit', String(limit));
+    if (workspaceId) params.append('workspace_id', workspaceId);
+    return fetchApi<SecurityReportList>(`/reports?${params.toString()}`);
+  },
     
   getReport: (reportId: string) => 
     fetchApi<SecurityReportDetail>(`/reports/${reportId}`),
     
-  createReport: (scanId: string) => 
-    fetchApi<SecurityReport>(`/reports?scan_id=${scanId}`, { method: 'POST' }),
+  createReport: (scanId: string, workspaceId?: string, title?: string) => 
+    fetchApi<SecurityReport>(`/reports`, {
+      method: 'POST',
+      body: JSON.stringify({ scan_id: scanId, workspace_id: workspaceId, title }),
+    }),
     
   downloadReport: async (reportId: string) => {
-    // We cannot use the standard fetchApi because it expects JSON, but this is a binary PDF.
     const token = localStorage.getItem('cloudguard_token');
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    // Assumes API_URL is accessible like in client.ts
-    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+    const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
     
     const response = await fetch(`${API_URL}/reports/${reportId}/download`, {
       method: 'GET',
-      headers
+      headers,
     });
     
     if (!response.ok) {

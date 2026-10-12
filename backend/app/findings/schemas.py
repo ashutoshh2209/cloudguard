@@ -40,6 +40,11 @@ class ScanSummary(BaseModel):
     medium: int = 0
     low: int = 0
     info: int = 0
+    checks_attempted: int = 0
+    checks_completed: int = 0
+    checks_failed: int = 0
+    checks_passed: int = 0
+    checks_errored: int = 0
 
 class CheckSummary(BaseModel):
     passed: int = 0
@@ -49,6 +54,7 @@ class CheckSummary(BaseModel):
 
 class ScanResult(BaseModel):
     scan_id: str
+    id: Optional[str] = None
     status: str
     account_id: str
     security_score: Optional[int] = None
@@ -57,6 +63,42 @@ class ScanResult(BaseModel):
     checks_summary: Optional[CheckSummary] = None
     category_scores: Optional[Dict[str, Any]] = None
     findings: List[Finding]
+
+    def __init__(self, **data):
+        if "scan_id" in data and "id" not in data:
+            data["id"] = data["scan_id"]
+        elif "id" in data and "scan_id" not in data:
+            data["scan_id"] = data["id"]
+        super().__init__(**data)
+
+class CheckResultItem(BaseModel):
+    id: str
+    scan_id: str
+    resource_id: str
+    rule_id: str
+    status: str
+    message: Optional[str] = None
+    error_message: Optional[str] = None
+    recommendation: Optional[str] = None
+    evidence: Optional[Dict[str, Any]] = None
+    checked_at: Optional[str] = None
+
+class ScanResponseItem(BaseModel):
+    id: str
+    scan_id: str
+    workspace_id: Optional[str] = None
+    status: str
+    started_at: str
+    completed_at: Optional[str] = None
+    aws_connection_id: Optional[str] = None
+    summary: ScanSummary
+    coverage_percentage: int = 0
+    security_score: Optional[int] = None
+    security_rating: Optional[str] = None
+
+class ScanDetailResponse(ScanResponseItem):
+    check_results: Optional[List[CheckResultItem]] = None
+    findings: Optional[List[Finding]] = None
 
 class ScanStatusInfo(BaseModel):
     scan_id: str
@@ -67,3 +109,4 @@ class ScanStatusInfo(BaseModel):
     rating: Optional[str] = None
     resources_scanned: int = 0
     finding_count: int = 0
+

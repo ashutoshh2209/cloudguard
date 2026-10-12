@@ -11,6 +11,9 @@ botocore
 sqlalchemy
 alembic
 psycopg2-binary
+pyjwt
+bcrypt
+email-validator
 
 reportlab
 

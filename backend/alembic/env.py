@@ -17,8 +17,10 @@ from app.models import Base
 # access to the values within the .ini file in use.
 config = context.config
 
-# Overwrite sqlalchemy.url with our settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Use settings.DATABASE_URL unless a custom URL is already configured (e.g. during tests)
+custom_url = config.get_main_option("sqlalchemy.url")
+if not custom_url or custom_url == "driver://user:pass@localhost/dbname":
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

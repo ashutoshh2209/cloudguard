@@ -1,1 +1,2 @@
-from app.rules.iam.mfa import IAMMFADisabledRule
+import app.rules.iam.mfa
+import app.rules.iam.admin_privileges

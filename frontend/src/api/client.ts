@@ -46,7 +46,18 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
         errorData = { detail: response.statusText };
       }
       
-      const message = errorData.detail || errorData.message || 'An API error occurred';
+      let message = 'An API error occurred';
+      if (typeof errorData?.detail === 'string') {
+        message = errorData.detail;
+      } else if (Array.isArray(errorData?.detail)) {
+        message = errorData.detail
+          .map((item: any) => (typeof item === 'string' ? item : item.msg || JSON.stringify(item)))
+          .join('; ');
+      } else if (typeof errorData?.message === 'string') {
+        message = errorData.message;
+      } else if (errorData?.detail && typeof errorData.detail === 'object') {
+        message = errorData.detail.msg || JSON.stringify(errorData.detail);
+      }
       
       if (response.status === 401) {
         // Clear token on 401
