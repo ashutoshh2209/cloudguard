@@ -26,6 +26,14 @@ def _format_finding(f: Finding) -> Dict[str, Any]:
     detected_iso = f.detected_at.isoformat() if f.detected_at else created_iso
     updated_iso = f.updated_at.isoformat() if f.updated_at else None
 
+    evidence = f.evidence or {}
+    is_simulated = bool(
+        evidence.get("simulated")
+        or evidence.get("is_demo")
+        or (f.resource_id and f.resource_id.startswith("demo-"))
+        or (f.title and "[SIMULATED]" in f.title)
+    )
+
     return {
         "id": f.id,
         "finding_id": f.id,
@@ -44,8 +52,10 @@ def _format_finding(f: Finding) -> Dict[str, Any]:
         "priority": f.priority or "P4",
         "status": f.status,
         "recommendation": f.recommendation,
-        "evidence": f.evidence or {},
+        "evidence": evidence,
         "risk_factors": f.risk_factors or [],
+        "is_simulated": is_simulated,
+        "source_label": "Simulated Finding (Demo Mode)" if is_simulated else "Live AWS Account",
         "created_at": created_iso,
         "detected_at": detected_iso,
         "updated_at": updated_iso,

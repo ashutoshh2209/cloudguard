@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     AWS_DEFAULT_REGION: str = "ap-south-1"
     AWS_ROLE_SESSION_NAME: str = "cloudguard-security-scan"
     CLOUDGUARD_EXTERNAL_ID: str | None = None
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
+    AWS_SESSION_TOKEN: str | None = None
+    AWS_PROFILE: str | None = None
     
     # CORS
     CORS_ORIGINS: List[str] | str = []

@@ -6,12 +6,13 @@ import { awsApi, AWSConnectionItem } from '../api/aws';
 import { useAuth } from '../context/AuthContext';
 
 export function AWSConnectionManager() {
-  const { activeWorkspace } = useAuth();
+  const { workspaces, activeWorkspace, switchWorkspace, createWorkspace } = useAuth();
   const [connections, setConnections] = useState<AWSConnectionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isActionPending, setIsActionPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
 
   // Form State
   const [roleArn, setRoleArn] = useState('');
@@ -21,17 +22,17 @@ export function AWSConnectionManager() {
   const isViewer = activeWorkspace?.role === 'VIEWER';
 
   const loadConnections = useCallback(async () => {
+    if (!activeWorkspace?.id) {
+      setConnections([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      if (activeWorkspace) {
-        const list = await awsApi.listConnections(activeWorkspace.id);
-        setConnections(list || []);
-      } else {
-        // Fallback to general list if no active workspace selected
-        const list = await awsApi.listConnections();
-        setConnections(list || []);
-      }
+      const list = await awsApi.listConnections(activeWorkspace.id);
+      setConnections(list || []);
     } catch (err: any) {
       // If endpoint returns error or empty, check legacy fallback
       try {
@@ -58,17 +59,43 @@ export function AWSConnectionManager() {
     } finally {
       setLoading(false);
     }
-  }, [activeWorkspace]);
+  }, [activeWorkspace?.id]);
 
   useEffect(() => {
     loadConnections();
   }, [loadConnections]);
 
+  const handleCreateAndSelectWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWorkspaceName.trim() || isActionPending) return;
+    try {
+      setIsActionPending(true);
+      setError(null);
+      const created = await createWorkspace(newWorkspaceName.trim());
+      setNewWorkspaceName('');
+      setSuccessMessage(`Workspace "${created.name}" created and selected.`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create workspace');
+    } finally {
+      setIsActionPending(false);
+    }
+  };
+
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeWorkspace) {
-      setError('Please select or create an active workspace first');
-      return;
+    let targetWorkspace = activeWorkspace;
+    if (!targetWorkspace) {
+      if (workspaces.length > 0) {
+        targetWorkspace = workspaces[0];
+        switchWorkspace(targetWorkspace.id);
+      } else {
+        try {
+          targetWorkspace = await createWorkspace('Personal Workspace');
+        } catch {
+          setError('Please select or create an active workspace first');
+          return;
+        }
+      }
     }
 
     setIsActionPending(true);
@@ -77,7 +104,7 @@ export function AWSConnectionManager() {
 
     try {
       await awsApi.createConnection({
-        workspace_id: activeWorkspace.id,
+        workspace_id: targetWorkspace.id,
         role_arn: roleArn.trim(),
         region: region.trim(),
         external_id: externalId.trim() ? externalId.trim() : null,
@@ -143,23 +170,82 @@ export function AWSConnectionManager() {
   }
 
   const activeConnection = connections.length > 0 ? connections[0] : null;
+  const isSimulatedConnection = activeConnection?.id === 'demo-simulated-connection';
+  const personalWorkspace = workspaces.find((w) => w.name === 'Personal Workspace' && w.id !== activeWorkspace?.id);
 
   return (
     <Card>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h3 className="text-lg font-bold text-content">AWS Accounts</h3>
           <p className="text-[14px] text-content-secondary">
             Connect and manage AWS environments for workspace{' '}
-            <span className="font-semibold text-content">{activeWorkspace?.name || 'Default'}</span> using secure IAM Role STS AssumeRole.
+            <span className="font-semibold text-content">{activeWorkspace?.name || 'None selected'}</span>
+            {activeWorkspace?.role ? (
+              <span className="text-xs text-accent-9 font-semibold ml-1.5">({activeWorkspace.role})</span>
+            ) : null}{' '}
+            using secure IAM Role STS AssumeRole.
           </p>
         </div>
-        {isViewer && (
-          <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-surface-2 text-content-muted border border-line">
-            Read-only (Viewer)
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {workspaces.length > 1 && activeWorkspace && (
+            <select
+              aria-label="Target workspace for AWS integration"
+              value={activeWorkspace.id}
+              onChange={(e) => switchWorkspace(e.target.value)}
+              className="bg-surface-2 border border-line rounded-lg px-3 py-1.5 text-[13px] text-content focus:outline-none focus:border-accent-9/50"
+            >
+              {workspaces.map((ws) => (
+                <option key={ws.id} value={ws.id}>
+                  {ws.name} ({ws.role || 'OWNER'})
+                </option>
+              ))}
+            </select>
+          )}
+          {isViewer && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-surface-2 text-content-muted border border-line">
+              Read-only (Viewer)
+            </span>
+          )}
+        </div>
       </div>
+
+      {!activeWorkspace && (
+        <div className="mb-6 p-4 bg-surface-2 border border-line rounded-lg space-y-3">
+          <div className="text-sm font-semibold text-content">
+            Select or create an active workspace before connecting AWS:
+          </div>
+          {workspaces.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {workspaces.map((ws) => (
+                <Button
+                  key={ws.id}
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={() => switchWorkspace(ws.id)}
+                >
+                  Select {ws.name} ({ws.role || 'OWNER'})
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <form onSubmit={handleCreateAndSelectWorkspace} className="flex gap-2 max-w-md">
+              <input
+                type="text"
+                required
+                placeholder="Workspace name (e.g., Personal Workspace)"
+                value={newWorkspaceName}
+                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                className="flex-1 bg-surface-1 border border-line rounded-lg px-3 py-1.5 text-sm text-content"
+              />
+              <Button variant="primary" size="sm" type="submit" disabled={isActionPending}>
+                Create Workspace
+              </Button>
+            </form>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 p-4 bg-severity-critical/10 border border-severity-critical/30 rounded-lg flex items-start gap-3 text-severity-critical-ink">
@@ -177,6 +263,22 @@ export function AWSConnectionManager() {
 
       {activeConnection ? (
         <div className="border border-line rounded-lg divide-y divide-line bg-surface-1">
+          {isSimulatedConnection && personalWorkspace && (
+            <div className="p-3 bg-accent-9/10 border-b border-accent-9/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-content">
+              <span>
+                Viewing seeded simulated connection in <strong>{activeWorkspace?.name}</strong>. Switch to{' '}
+                <strong>{personalWorkspace.name}</strong> to connect a live AWS IAM Role.
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => switchWorkspace(personalWorkspace.id)}
+              >
+                Switch to {personalWorkspace.name}
+              </Button>
+            </div>
+          )}
           <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-surface-2 border border-line flex items-center justify-center shrink-0">
@@ -289,6 +391,7 @@ export function AWSConnectionManager() {
                     <option value="us-west-2">us-west-2 (Oregon)</option>
                     <option value="ap-south-1">ap-south-1 (Mumbai)</option>
                     <option value="ap-southeast-1">ap-southeast-1 (Singapore)</option>
+                    <option value="ap-southeast-2">ap-southeast-2 (Sydney)</option>
                     <option value="ap-northeast-1">ap-northeast-1 (Tokyo)</option>
                     <option value="eu-west-1">eu-west-1 (Ireland)</option>
                     <option value="eu-central-1">eu-central-1 (Frankfurt)</option>

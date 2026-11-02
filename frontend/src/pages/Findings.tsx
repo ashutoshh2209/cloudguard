@@ -206,7 +206,14 @@ export function Findings() {
                       </span>
                     </td>
                     <td className="px-6 py-3.5">
-                      <div className="text-[14px] font-bold text-content">{finding.title}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-bold text-content">{finding.title}</span>
+                        {(finding.is_simulated || (finding.evidence as any)?.simulated) && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30 flex-shrink-0">
+                            Simulated Demo
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[12px] text-content-muted mt-0.5 truncate max-w-md">{finding.rule_id}</div>
                     </td>
                     <td className="px-6 py-3.5 font-mono text-[12px] text-content-secondary">
@@ -290,6 +297,28 @@ export function Findings() {
                 <h3 className="text-xl font-bold text-content leading-tight">
                   {selectedFinding.title}
                 </h3>
+
+                {(selectedFinding.is_simulated || (selectedFinding.evidence as any)?.simulated) ? (
+                  <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-[13px] text-amber-500">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4" />
+                      Simulated Demonstration Finding
+                    </div>
+                    <div className="text-[12px] mt-0.5 text-content-secondary">
+                      This finding was deterministically generated for local demonstration mode and did not originate from a live AWS account.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-[13px] text-blue-500">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <Shield className="w-4 h-4" />
+                      Live AWS Account Finding
+                    </div>
+                    <div className="text-[12px] mt-0.5 text-content-secondary">
+                      Evaluated from discovered cloud resources via active IAM AssumeRole connection.
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Meta Grid */}

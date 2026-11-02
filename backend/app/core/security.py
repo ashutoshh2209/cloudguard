@@ -20,9 +20,11 @@ class TokenInvalidError(SecurityError):
 def hash_password(password: str) -> str:
     """
     Hash a plaintext password using bcrypt with automatically generated salt.
-    Never stores or logs the plaintext password.
+    Never stores or logs the plaintext password. Safely bounds input to 72 bytes.
     """
-    password_bytes = password.encode("utf-8")
+    if not password:
+        raise ValueError("Password cannot be empty")
+    password_bytes = password.encode("utf-8")[:72]
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode("utf-8")
@@ -30,13 +32,20 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a plaintext password against a stored bcrypt hash.
-    Safe against timing attacks.
+    Safe against timing attacks, whitespace deviations, and byte/string differences.
     """
+    if not plain_password or not hashed_password:
+        return False
     try:
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
-            hashed_password.encode("utf-8")
-        )
+        if isinstance(hashed_password, str):
+            hash_bytes = hashed_password.strip().encode("utf-8")
+        elif isinstance(hashed_password, (bytes, bytearray)):
+            hash_bytes = bytes(hashed_password).strip()
+        else:
+            return False
+
+        plain_bytes = plain_password.encode("utf-8")[:72]
+        return bcrypt.checkpw(plain_bytes, hash_bytes)
     except Exception:
         return False
 

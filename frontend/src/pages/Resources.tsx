@@ -37,15 +37,13 @@ export function Resources() {
 
       let data: CloudResourceItem[] = [];
 
-      // 1. If active workspace is present, query real workspace resources
-      if (activeWorkspace) {
-        data = await resourcesApi.listResources({
-          workspace_id: activeWorkspace.id,
-          service: selectedService !== 'all' ? selectedService : undefined,
-        });
-      }
+      // 1. Query resources (scoped to activeWorkspace if signed in, or general/demo resources for guests)
+      data = await resourcesApi.listResources({
+        workspace_id: activeWorkspace?.id,
+        service: selectedService !== 'all' ? selectedService : undefined,
+      });
 
-      // 2. If no workspace resources found, check latest scan as fallback
+      // 2. If no resources found and no active workspace, check latest scan as fallback
       if ((!data || data.length === 0) && !activeWorkspace) {
         try {
           const scans = await fetchApi<SecurityScan[]>('/scans');

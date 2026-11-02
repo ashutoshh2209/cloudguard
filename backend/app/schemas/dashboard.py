@@ -33,3 +33,5 @@ class DashboardSummary(BaseModel):
     previous_score: Optional[int] = None
     score_delta: Optional[int] = None
     score_trend: List[ScoreTrendPoint] = []
+    is_simulated: bool = False
+    scan_mode: Optional[str] = None

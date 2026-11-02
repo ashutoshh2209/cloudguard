@@ -2,17 +2,20 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
-import { Users, UserPlus, Trash2, ShieldCheck, Mail, Loader2 } from 'lucide-react';
+import { Users, UserPlus, Trash2, Mail, Loader2, Briefcase, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { workspacesApi, WorkspaceMemberItem } from '../api/workspaces';
 
 export function WorkspaceMemberManager() {
-  const { activeWorkspace, user, refreshWorkspaces } = useAuth();
+  const { workspaces, activeWorkspace, switchWorkspace, createWorkspace, user, refreshWorkspaces } = useAuth();
   const [members, setMembers] = useState<WorkspaceMemberItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [addEmail, setAddEmail] = useState('');
   const [addRole, setAddRole] = useState('MEMBER');
   const [adding, setAdding] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -21,7 +24,11 @@ export function WorkspaceMemberManager() {
   const canManage = isOwner || isAdmin;
 
   const loadMembers = useCallback(async () => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace) {
+      setMembers([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError('');
@@ -37,6 +44,24 @@ export function WorkspaceMemberManager() {
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
+
+  const handleCreateWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWorkspaceName.trim() || creatingWorkspace) return;
+    try {
+      setCreatingWorkspace(true);
+      setError('');
+      setSuccess('');
+      const created = await createWorkspace(newWorkspaceName.trim());
+      setNewWorkspaceName('');
+      setShowCreateForm(false);
+      setSuccess(`Created and selected workspace "${created.name}"`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create workspace');
+    } finally {
+      setCreatingWorkspace(false);
+    }
+  };
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,14 +105,6 @@ export function WorkspaceMemberManager() {
     }
   };
 
-  if (!activeWorkspace) {
-    return (
-      <Card>
-        <p className="text-[14px] text-content-secondary">No workspace selected.</p>
-      </Card>
-    );
-  }
-
   const getRoleBadgeColor = (role: string): 'blue' | 'gray' | 'red' | 'yellow' | 'green' | 'orange' => {
     switch (role) {
       case 'OWNER': return 'red';
@@ -98,21 +115,117 @@ export function WorkspaceMemberManager() {
     }
   };
 
+  if (!activeWorkspace) {
+    return (
+      <Card className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Briefcase className="w-5 h-5 text-accent-9" />
+          <h3 className="text-lg font-bold text-content">Select or Create a Workspace</h3>
+        </div>
+        <p className="text-[14px] text-content-secondary">
+          No active workspace is currently selected. Select an existing workspace below or create a new one.
+        </p>
+
+        {workspaces.length > 0 && (
+          <div className="space-y-2">
+            <label className="block text-[12px] font-bold uppercase tracking-wider text-content-muted">
+              Available Workspaces
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {workspaces.map((ws) => (
+                <button
+                  key={ws.id}
+                  onClick={() => switchWorkspace(ws.id)}
+                  className="flex items-center justify-between p-3 rounded-lg border border-line bg-surface-1 hover:border-accent-9 text-left transition-colors"
+                >
+                  <div>
+                    <div className="text-[14px] font-semibold text-content">{ws.name}</div>
+                    <div className="text-[11px] text-content-muted font-mono">{ws.id}</div>
+                  </div>
+                  <Badge color={getRoleBadgeColor(ws.role || 'OWNER')}>{ws.role || 'OWNER'}</Badge>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleCreateWorkspace} className="flex flex-col sm:flex-row gap-3 pt-2">
+          <input
+            type="text"
+            required
+            placeholder="New workspace name (e.g., Production AWS)"
+            value={newWorkspaceName}
+            onChange={(e) => setNewWorkspaceName(e.target.value)}
+            className="flex-1 bg-surface-1 border border-line rounded-lg px-3 py-2 text-[14px] text-content focus:outline-none focus:border-accent-9/50"
+          />
+          <Button variant="primary" type="submit" disabled={creatingWorkspace || !newWorkspaceName.trim()}>
+            {creatingWorkspace ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Workspace'}
+          </Button>
+        </form>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Workspace Overview */}
+      {/* Workspace Overview & Switcher */}
       <Card>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-bold text-content">{activeWorkspace.name}</h3>
-            <p className="text-[13px] text-content-secondary mt-0.5">
-              Your role: <span className="font-semibold text-accent-9">{activeWorkspace.role}</span>
+            <div className="flex items-center gap-2.5">
+              <h3 className="text-lg font-bold text-content">{activeWorkspace.name}</h3>
+              <Badge color={getRoleBadgeColor(activeWorkspace.role || 'OWNER')}>
+                {activeWorkspace.role || 'OWNER'}
+              </Badge>
+            </div>
+            <p className="text-[12px] text-content-muted font-mono mt-1">
+              Workspace ID: {activeWorkspace.id}
             </p>
           </div>
-          <Badge color={getRoleBadgeColor(activeWorkspace.role || 'MEMBER')}>
-            {activeWorkspace.role}
-          </Badge>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {workspaces.length > 1 && (
+              <select
+                aria-label="Active workspace"
+                value={activeWorkspace.id}
+                onChange={(e) => switchWorkspace(e.target.value)}
+                className="bg-surface-2 border border-line rounded-lg px-3 py-1.5 text-[13px] text-content focus:outline-none focus:border-accent-9/50"
+              >
+                {workspaces.map((ws) => (
+                  <option key={ws.id} value={ws.id}>
+                    {ws.name} ({ws.role || 'OWNER'})
+                  </option>
+                ))}
+              </select>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => setShowCreateForm((prev) => !prev)}
+              className="flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Workspace
+            </Button>
+          </div>
         </div>
+
+        {showCreateForm && (
+          <form onSubmit={handleCreateWorkspace} className="mt-4 pt-4 border-t border-line flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              required
+              placeholder="New workspace name (e.g., Production AWS)"
+              value={newWorkspaceName}
+              onChange={(e) => setNewWorkspaceName(e.target.value)}
+              className="flex-1 bg-surface-1 border border-line rounded-lg px-3 py-2 text-[14px] text-content focus:outline-none focus:border-accent-9/50"
+            />
+            <Button variant="primary" type="submit" disabled={creatingWorkspace || !newWorkspaceName.trim()}>
+              {creatingWorkspace ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create & Select'}
+            </Button>
+          </form>
+        )}
       </Card>
 
       {/* Add Member Form (Admins / Owners only) */}

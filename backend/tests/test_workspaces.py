@@ -334,3 +334,149 @@ def test_viewer_restrictions():
         json={"role": "MEMBER"},
         headers=viewer_h,
     ).status_code == 403
+
+
+def test_register_and_login_auto_provision_default_workspace_with_owner_role():
+    # Register a brand-new user through the auth endpoint
+    reg_res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "newuser@cloudguard.io",
+            "password": "StrongPassword123!",
+            "full_name": "New CloudGuard User",
+        },
+    )
+    assert reg_res.status_code == 201
+
+    # Login and verify a real default workspace with OWNER membership exists immediately
+    login_res = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "newuser@cloudguard.io",
+            "password": "StrongPassword123!",
+        },
+    )
+    assert login_res.status_code == 200
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Simulate page reload: /auth/me + /workspaces
+    me_res = client.get("/api/v1/auth/me", headers=headers)
+    assert me_res.status_code == 200
+
+    ws_res = client.get("/api/v1/workspaces", headers=headers)
+    assert ws_res.status_code == 200
+    workspaces = ws_res.json()
+    assert len(workspaces) == 1
+    default_ws = workspaces[0]
+    assert default_ws["name"] == "Personal Workspace"
+    assert default_ws["current_user_role"] == "OWNER"
+    assert default_ws["member_count"] == 1
+
+    # Verify Settings -> Workspace & Members endpoint returns the OWNER member
+    members_res = client.get(f"/api/v1/workspaces/{default_ws['id']}/members", headers=headers)
+    assert members_res.status_code == 200
+    members = members_res.json()
+    assert len(members) == 1
+    assert members[0]["email"] == "newuser@cloudguard.io"
+    assert members[0]["role"] == "OWNER"
+
+
+def test_workspace_selection_reload_and_aws_connection_authorization(monkeypatch):
+    from app.aws.sts_service import aws_sts_service
+
+    # Mock STS verify_role so no real AWS call is made during unit test
+    def fake_verify_role(role_arn: str, region: str = "us-east-1", external_id=None):
+        return {
+            "credentials": {
+                "AccessKeyId": "ASIAFAKEACCESSKEY123",
+                "SecretAccessKey": "fakeSecretKey1234567890",
+                "SessionToken": "fakeSessionToken1234567890",
+            },
+            "identity": {
+                "account_id": "123456789012",
+                "identity_arn": "arn:aws:sts::123456789012:assumed-role/CloudGuardAuditRole/cloudguard-audit-session",
+            },
+            "account_id": "123456789012",
+            "identity_arn": "arn:aws:sts::123456789012:assumed-role/CloudGuardAuditRole/cloudguard-audit-session",
+        }
+
+    monkeypatch.setattr(aws_sts_service, "verify_role", fake_verify_role)
+
+    # 1. User logs in and gets default workspace
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "awsowner@cloudguard.io",
+            "password": "StrongPassword123!",
+            "full_name": "AWS Owner",
+        },
+    )
+    token = client.post(
+        "/api/v1/auth/login",
+        json={"email": "awsowner@cloudguard.io", "password": "StrongPassword123!"},
+    ).json()["access_token"]
+    owner_headers = {"Authorization": f"Bearer {token}"}
+
+    # 2. User creates a new workspace and selects it
+    created_ws = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Production AWS Workspace"},
+        headers=owner_headers,
+    )
+    assert created_ws.status_code == 201
+    selected_ws_id = created_ws.json()["id"]
+    assert created_ws.json()["current_user_role"] == "OWNER"
+
+    # 3. Simulate page refresh: list workspaces and verify selected_ws_id is present with OWNER role
+    listed = client.get("/api/v1/workspaces", headers=owner_headers).json()
+    matching = [w for w in listed if w["id"] == selected_ws_id]
+    assert len(matching) == 1
+    assert matching[0]["name"] == "Production AWS Workspace"
+    assert matching[0]["current_user_role"] == "OWNER"
+
+    # 4. Connect AWS account using the selected workspace ID (OWNER authorized)
+    conn_res = client.post(
+        "/api/v1/aws/connections",
+        json={
+            "workspace_id": selected_ws_id,
+            "role_arn": "arn:aws:iam::123456789012:role/CloudGuardAuditRole",
+            "region": "us-east-1",
+            "external_id": "ext-123456",
+        },
+        headers=owner_headers,
+    )
+    assert conn_res.status_code == 201
+    conn_data = conn_res.json()
+    assert conn_data["workspace_id"] == selected_ws_id
+    assert conn_data["account_id"] == "123456789012"
+    assert conn_data["status"] == "CONNECTED"
+
+    # 5. Verify listing connections for the selected workspace returns the connection
+    list_conn_res = client.get(
+        f"/api/v1/aws/connections?workspace_id={selected_ws_id}",
+        headers=owner_headers,
+    )
+    assert list_conn_res.status_code == 200
+    assert len(list_conn_res.json()) == 1
+    assert list_conn_res.json()[0]["id"] == conn_data["id"]
+
+    # 6. Verify a VIEWER in that workspace is forbidden from creating/modifying AWS connections
+    _, viewer_token = create_test_user("viewer_aws@cloudguard.io", "Viewer AWS")
+    viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
+    client.post(
+        f"/api/v1/workspaces/{selected_ws_id}/members",
+        json={"email": "viewer_aws@cloudguard.io", "role": "VIEWER"},
+        headers=owner_headers,
+    )
+    viewer_conn_res = client.post(
+        "/api/v1/aws/connections",
+        json={
+            "workspace_id": selected_ws_id,
+            "role_arn": "arn:aws:iam::123456789012:role/AnotherRole",
+            "region": "us-east-1",
+        },
+        headers=viewer_headers,
+    )
+    assert viewer_conn_res.status_code == 403
+

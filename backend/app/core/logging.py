@@ -20,8 +20,11 @@ def setup_logging():
     )
     
     # Configure specific loggers
-    # Silence chatty third-party loggers if necessary
+    # Silence chatty third-party loggers and prevent botocore from logging raw AWS STS headers/tokens
     logging.getLogger("uvicorn.access").setLevel(logging.INFO)
+    logging.getLogger("botocore").setLevel(logging.WARNING)
+    logging.getLogger("boto3").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
     
     logger = logging.getLogger(settings.APP_NAME)
     logger.info(f"Logging configured for {settings.ENVIRONMENT} environment")

@@ -40,6 +40,12 @@ router = APIRouter()
     summary="Create a new workspace",
     description="Creates a new workspace and automatically designates the creator as OWNER.",
 )
+@router.post(
+    "/",
+    response_model=WorkspaceResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 def create_workspace(
     request: WorkspaceCreateRequest,
     current_user: User = Depends(get_current_user),
@@ -89,10 +95,39 @@ def create_workspace(
     summary="List user's workspaces",
     description="Returns all workspaces where the authenticated user is a member.",
 )
+@router.get(
+    "/",
+    response_model=List[WorkspaceResponse],
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 def list_workspaces(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> List[WorkspaceResponse]:
+    # Ensure any workspace owned by current_user has an OWNER membership row
+    owned_workspaces = db.query(Workspace).filter(Workspace.owner_id == current_user.id).all()
+    for ws in owned_workspaces:
+        existing = (
+            db.query(WorkspaceMember)
+            .filter(
+                WorkspaceMember.workspace_id == ws.id,
+                WorkspaceMember.user_id == current_user.id,
+            )
+            .first()
+        )
+        if not existing:
+            db.add(
+                WorkspaceMember(
+                    id=str(uuid.uuid4()),
+                    workspace_id=ws.id,
+                    user_id=current_user.id,
+                    role=WorkspaceRole.OWNER.value,
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+            db.commit()
+
     memberships = (
         db.query(WorkspaceMember)
         .filter(WorkspaceMember.user_id == current_user.id)

@@ -28,6 +28,8 @@ export interface SecurityScan {
   security_score?: number;
   security_rating?: string;
   category_scores?: Record<string, CategoryScore>;
+  is_simulated?: boolean;
+  scan_type?: string;
 }
 
 export interface ScoreTrendPoint {
@@ -57,6 +59,8 @@ export interface Finding {
   recommendation?: string;
   evidence?: Record<string, any>;
   risk_factors?: string[];
+  is_simulated?: boolean;
+  source_label?: string;
   created_at?: string;
   detected_at?: string;
   updated_at?: string;
@@ -118,6 +122,8 @@ export interface DashboardSummary {
   previous_score?: number;
   score_delta?: number;
   score_trend?: ScoreTrendPoint[];
+  is_simulated?: boolean;
+  scan_mode?: string;
 }
 
 export interface AWSConnectionStatus {

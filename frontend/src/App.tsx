@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
@@ -16,13 +16,14 @@ import { Register } from './pages/Register';
 
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
   
   if (isLoading) {
     return <div className="min-h-screen bg-canvas flex items-center justify-center text-content">Loading...</div>;
   }
-  
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
   
   return <Outlet />;

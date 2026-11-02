@@ -27,7 +27,7 @@ const MAIN_NAV = [
 ];
 
 export function Sidebar() {
-  const { activeWorkspace, workspaces, switchWorkspace, createWorkspace } = useAuth();
+  const { activeWorkspace, workspaces, isAuthenticated, switchWorkspace, createWorkspace } = useAuth();
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -128,7 +128,7 @@ export function Sidebar() {
                 Workspace
               </span>
               <span className="text-[13px] text-content font-semibold group-hover:text-accent-9 transition-colors truncate">
-                {activeWorkspace?.name || 'Personal Workspace'}
+                {activeWorkspace ? activeWorkspace.name : 'No Workspace Selected'}
               </span>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -144,70 +144,96 @@ export function Sidebar() {
           {workspaceOpen && (
             <div className="absolute bottom-full left-0 mb-2 w-full rounded-lg bg-surface-1 border border-line shadow-xl py-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
               <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-content-muted border-b border-line">
-                Your Workspaces
+                {isAuthenticated ? 'Your Workspaces' : 'Preview Workspace'}
               </div>
-              <div className="max-h-48 overflow-y-auto py-1">
-                {workspaces.map((ws) => (
-                  <button
-                    key={ws.id}
-                    onClick={() => {
-                      switchWorkspace(ws.id);
-                      setWorkspaceOpen(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-surface-2 transition-colors",
-                      activeWorkspace?.id === ws.id ? "text-accent-9 font-semibold bg-surface-2/60" : "text-content font-medium"
-                    )}
-                  >
-                    <span className="truncate pr-2">{ws.name}</span>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-2 border border-line text-content-secondary">
-                        {ws.role}
-                      </span>
-                      {activeWorkspace?.id === ws.id && <Check className="w-3.5 h-3.5 text-accent-9" />}
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {!isAuthenticated ? (
+                <div className="p-3 space-y-2">
+                  <p className="text-[12px] text-content-secondary">
+                    Sign in or create an account to manage custom workspaces and connect live AWS environments.
+                  </p>
+                  <div className="flex gap-2 pt-1">
+                    <NavLink
+                      to="/login"
+                      onClick={() => setWorkspaceOpen(false)}
+                      className="flex-1 text-center py-1.5 px-2 rounded bg-surface-2 border border-line text-[12px] font-semibold text-content hover:border-accent-9 transition-colors"
+                    >
+                      Log In
+                    </NavLink>
+                    <NavLink
+                      to="/register"
+                      onClick={() => setWorkspaceOpen(false)}
+                      className="flex-1 text-center py-1.5 px-2 rounded bg-accent-9 text-white text-[12px] font-semibold hover:bg-accent-10 transition-colors"
+                    >
+                      Sign Up
+                    </NavLink>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="max-h-48 overflow-y-auto py-1">
+                    {workspaces.map((ws) => (
+                      <button
+                        key={ws.id}
+                        onClick={() => {
+                          switchWorkspace(ws.id);
+                          setWorkspaceOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-surface-2 transition-colors",
+                          activeWorkspace?.id === ws.id ? "text-accent-9 font-semibold bg-surface-2/60" : "text-content font-medium"
+                        )}
+                      >
+                        <span className="truncate pr-2">{ws.name}</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-2 border border-line text-content-secondary">
+                            {ws.role}
+                          </span>
+                          {activeWorkspace?.id === ws.id && <Check className="w-3.5 h-3.5 text-accent-9" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
 
-              <div className="border-t border-line mt-1 pt-1 px-2">
-                {!isCreating ? (
-                  <button
-                    onClick={() => setIsCreating(true)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 text-[12px] font-medium text-accent-9 hover:bg-surface-2 rounded transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Create Workspace</span>
-                  </button>
-                ) : (
-                  <form onSubmit={handleCreateWorkspace} className="space-y-1.5 py-1">
-                    <input
-                      type="text"
-                      autoFocus
-                      required
-                      placeholder="Workspace name"
-                      value={newWorkspaceName}
-                      onChange={(e) => setNewWorkspaceName(e.target.value)}
-                      className="w-full bg-surface-2 border border-line rounded px-2 py-1 text-[12px] text-content focus:outline-none focus:border-accent-9"
-                    />
-                    <div className="flex gap-1 justify-end">
+                  <div className="border-t border-line mt-1 pt-1 px-2">
+                    {!isCreating ? (
                       <button
-                        type="button"
-                        onClick={() => setIsCreating(false)}
-                        className="px-2 py-0.5 text-[11px] rounded text-content-secondary hover:bg-surface-2"
+                        onClick={() => setIsCreating(true)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-[12px] font-medium text-accent-9 hover:bg-surface-2 rounded transition-colors"
                       >
-                        Cancel
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Create Workspace</span>
                       </button>
-                      <button
-                        type="submit"
-                        className="px-2 py-0.5 text-[11px] rounded bg-accent-9 text-white font-medium hover:bg-accent-10"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
+                    ) : (
+                      <form onSubmit={handleCreateWorkspace} className="space-y-1.5 py-1">
+                        <input
+                          type="text"
+                          autoFocus
+                          required
+                          placeholder="Workspace name"
+                          value={newWorkspaceName}
+                          onChange={(e) => setNewWorkspaceName(e.target.value)}
+                          className="w-full bg-surface-2 border border-line rounded px-2 py-1 text-[12px] text-content focus:outline-none focus:border-accent-9"
+                        />
+                        <div className="flex gap-1 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setIsCreating(false)}
+                            className="px-2 py-0.5 text-[11px] rounded text-content-secondary hover:bg-surface-2"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-2 py-0.5 text-[11px] rounded bg-accent-9 text-white font-medium hover:bg-accent-10"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

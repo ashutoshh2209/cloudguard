@@ -62,6 +62,13 @@ def _format_scan_item(scan: Scan) -> Dict[str, Any]:
         "coverage_percentage": scan.coverage_percentage or 0,
         "security_score": scan.security_score,
         "security_rating": scan.security_rating,
+        "is_simulated": bool(
+            (scan.aws_connection_id and "demo" in scan.aws_connection_id.lower())
+            or (scan.findings and any(
+                ((f.evidence or {}).get("simulated")) or (f.resource_id and f.resource_id.startswith("demo-"))
+                for f in scan.findings
+            ))
+        ),
     }
 
 
@@ -139,6 +146,11 @@ def _format_scan_detail(scan: Scan, db: Session) -> Dict[str, Any]:
             "risk_score": f.risk_score,
             "priority": f.priority or "P4",
             "risk_factors": f.risk_factors or [],
+            "is_simulated": bool(
+                ((f.evidence or {}).get("simulated"))
+                or (f.resource_id and f.resource_id.startswith("demo-"))
+                or (f.title and "[SIMULATED]" in f.title)
+            ),
             "created_at": f.created_at.isoformat() if f.created_at else (f.detected_at.isoformat() if f.detected_at else None),
             "detected_at": f.detected_at.isoformat() if f.detected_at else None,
             "updated_at": f.updated_at.isoformat() if f.updated_at else None,

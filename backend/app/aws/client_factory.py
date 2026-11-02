@@ -27,7 +27,8 @@ class AWSClientFactory:
         Creates and returns a boto3 client for the specified service.
         Example: client_factory.create_client('s3')
         """
-        return self.session.client(service_name, region_name=region_name or self._region)
+        target_region = region_name or ("us-east-1" if service_name in ("iam", "s3", "sts") else self._region)
+        return self.session.client(service_name, region_name=target_region)
 
     def create_resource(self, service_name: str, region_name: Optional[str] = None):
         """

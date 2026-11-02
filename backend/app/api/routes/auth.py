@@ -11,6 +11,8 @@ from app.core.logging import logger
 from app.core.security import hash_password, verify_password, create_access_token
 from app.models.user import User
 from app.models.revoked_token import RevokedToken
+from app.models.workspace import Workspace
+from app.models.workspace_member import WorkspaceMember
 from app.schemas.auth import (
     RegisterRequest,
     LoginRequest,
@@ -21,6 +23,63 @@ from app.schemas.auth import (
 from app.api.deps import get_current_user, get_current_token_payload
 
 router = APIRouter()
+
+
+def _ensure_user_has_workspace(db: Session, user: User) -> None:
+    """
+    Ensures the user has at least one real workspace with OWNER membership.
+    Also repairs any owned workspace missing a WorkspaceMember row.
+    """
+    now = datetime.now(timezone.utc)
+
+    owned_workspaces = db.query(Workspace).filter(Workspace.owner_id == user.id).all()
+    for ws in owned_workspaces:
+        existing_member = (
+            db.query(WorkspaceMember)
+            .filter(
+                WorkspaceMember.workspace_id == ws.id,
+                WorkspaceMember.user_id == user.id,
+            )
+            .first()
+        )
+        if not existing_member:
+            db.add(
+                WorkspaceMember(
+                    id=str(uuid.uuid4()),
+                    workspace_id=ws.id,
+                    user_id=user.id,
+                    role="OWNER",
+                    created_at=now,
+                )
+            )
+            db.commit()
+
+    has_membership = (
+        db.query(WorkspaceMember)
+        .filter(WorkspaceMember.user_id == user.id)
+        .first()
+    )
+    if not has_membership:
+        ws_id = str(uuid.uuid4())
+        default_ws = Workspace(
+            id=ws_id,
+            name="Personal Workspace",
+            owner_id=user.id,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(default_ws)
+        db.add(
+            WorkspaceMember(
+                id=str(uuid.uuid4()),
+                workspace_id=ws_id,
+                user_id=user.id,
+                role="OWNER",
+                created_at=now,
+            )
+        )
+        db.commit()
+
 
 @router.post(
     "/register",
@@ -39,7 +98,7 @@ def register(
     # Check for existing user with duplicate email
     existing_user = (
         db.query(User)
-        .filter(func.lower(User.email) == normalized_email)
+        .filter(func.lower(func.trim(User.email)) == normalized_email)
         .first()
     )
     if existing_user:
@@ -64,6 +123,8 @@ def register(
     db.commit()
     db.refresh(new_user)
 
+    _ensure_user_has_workspace(db, new_user)
+
     logger.info(f"User registered successfully with ID: {new_user.id}")
     return new_user
 
@@ -82,7 +143,7 @@ def login(
 
     user = (
         db.query(User)
-        .filter(func.lower(User.email) == normalized_email)
+        .filter(func.lower(func.trim(User.email)) == normalized_email)
         .first()
     )
 
@@ -101,6 +162,8 @@ def login(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user account",
         )
+
+    _ensure_user_has_workspace(db, user)
 
     # Create JWT access token with unique JTI for revocation support
     access_token = create_access_token(subject=user.id)
@@ -123,7 +186,9 @@ def login(
 )
 def get_me(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> UserResponse:
+    _ensure_user_has_workspace(db, current_user)
     return UserResponse.model_validate(current_user)
 
 @router.post(

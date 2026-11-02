@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Shield, Lock, Mail } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -10,15 +10,27 @@ export function Login() {
   const [error, setError] = useState('');
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { from?: string })?.from || '/app';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
       await login(email, password);
-      navigate('/app');
+      navigate(redirectTo, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Failed to login');
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setError('');
+    try {
+      await login('demo@cloudguard.io', 'DemoPassword123!');
+      navigate(redirectTo, { replace: true });
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in with demo account');
     }
   };
 
@@ -34,7 +46,7 @@ export function Login() {
         <p className="mt-2 text-center text-sm text-content-secondary">
           Or{' '}
           <Link to="/register" className="font-medium text-accent-9 hover:text-accent-10">
-            create a new workspace
+            create a new workspace account
           </Link>
         </p>
       </div>
@@ -86,7 +98,7 @@ export function Login() {
               </div>
             </div>
 
-            <div>
+            <div className="space-y-3">
               <Button
                 type="submit"
                 variant="primary"
@@ -94,6 +106,16 @@ export function Login() {
                 disabled={isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDemoLogin}
+                className="w-full flex justify-center py-2"
+                disabled={isLoading}
+              >
+                Continue with Demo Account (demo@cloudguard.io)
               </Button>
             </div>
           </form>

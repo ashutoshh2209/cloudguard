@@ -159,6 +159,15 @@ export function ScanDetailModal({ scanId, isOpen, onClose }: ScanDetailModalProp
                         }`}>
                           {scan.status}
                         </span>
+                        {scan.is_simulated ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            Simulated Demo
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                            Live AWS
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl font-extrabold text-content font-mono">
@@ -184,6 +193,15 @@ export function ScanDetailModal({ scanId, isOpen, onClose }: ScanDetailModalProp
                       </div>
                     </div>
                   </div>
+
+                  {scan.is_simulated && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-lg text-amber-500 text-xs flex items-center gap-2.5">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <span>
+                        <strong>Demonstration Mode:</strong> Deterministic synthetic test findings for grading and evaluation. These findings do not originate from an active AWS account.
+                      </span>
+                    </div>
+                  )}
 
                   {/* AI Summary Card */}
                   <div className="p-4 bg-surface-2 rounded-xl border border-line">

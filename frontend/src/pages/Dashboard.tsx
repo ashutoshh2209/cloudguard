@@ -126,7 +126,7 @@ export function Dashboard() {
   }
 
   // Handle AWS Disconnected State
-  if (!awsStatus?.connected) {
+  if (!awsStatus?.connected && !data?.is_simulated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px] text-center max-w-lg mx-auto">
         <Cloud className="w-16 h-16 text-content-muted mb-4" />
@@ -201,6 +201,11 @@ export function Dashboard() {
                   {activeWorkspace.name}
                 </span>
               )}
+              {data.is_simulated && (
+                <span className="text-[11px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  Simulated Demo
+                </span>
+              )}
             </div>
             <p className="text-[14px] text-content-secondary mt-1">
               Deterministic risk engine score and vulnerability metrics.
@@ -217,10 +222,31 @@ export function Dashboard() {
           </div>
         </div>
 
+        {data.is_simulated && (
+          <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500 text-xs">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <div>
+              <span className="font-bold uppercase tracking-wider mr-1">Local Demonstration Mode:</span>
+              <span className="text-content-secondary">
+                Showing deterministic simulated security findings for academic evaluation. These findings do not originate from a live AWS account. Switch to <strong>Personal Workspace</strong> in the header to connect real AWS IAM credentials.
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-6 py-3 border-y border-line text-[12px] font-medium text-content-muted w-full overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-content font-semibold uppercase tracking-wider">AWS Connected</span>
+            {data.is_simulated ? (
+              <>
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="text-amber-500 font-semibold uppercase tracking-wider">Simulated Demo</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-content font-semibold uppercase tracking-wider">AWS Connected</span>
+              </>
+            )}
           </div>
           <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
           <div className="flex items-center gap-2 flex-shrink-0">

@@ -171,6 +171,14 @@ async def get_dashboard(
         else (latest_scan.started_at.isoformat() if latest_scan.started_at else None)
     )
 
+    is_sim = bool(
+        (latest_scan.aws_connection_id and "demo" in latest_scan.aws_connection_id.lower())
+        or (latest_scan.findings and any(
+            ((f.evidence or {}).get("simulated")) or (f.resource_id and f.resource_id.startswith("demo-"))
+            for f in latest_scan.findings
+        ))
+    )
+
     return DashboardSummary(
         security_score=latest_scan.security_score,
         rating=latest_scan.security_rating or "Not Scored",
@@ -187,4 +195,6 @@ async def get_dashboard(
         previous_score=previous_score,
         score_delta=score_delta,
         score_trend=score_trend,
+        is_simulated=is_sim,
+        scan_mode="simulated_demo" if is_sim else "live_aws",
     )

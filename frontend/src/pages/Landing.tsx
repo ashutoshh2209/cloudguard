@@ -2,8 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, ChevronRight, Server, Database, Cloud } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { useAuth } from '../context/AuthContext';
 
 export function Landing() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="min-h-screen bg-canvas text-content flex flex-col font-sans selection:bg-accent-subtle">
       <header className="h-20 border-b border-line flex items-center justify-between px-8 md:px-16 z-20 bg-surface-1/80 backdrop-blur-md sticky top-0">
@@ -11,9 +14,21 @@ export function Landing() {
           <Shield className="w-6 h-6 text-accent-9 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
           <span className="text-content font-bold text-xl tracking-tight">CloudGuard</span>
         </div>
-        <div className="flex items-center gap-6 text-sm font-medium">
-          <a href="#features" className="text-content-secondary hover:text-content transition-colors">Features</a>
-          <a href="#how-it-works" className="text-content-secondary hover:text-content transition-colors">How it Works</a>
+        <div className="flex items-center gap-4 md:gap-6 text-sm font-medium">
+          <a href="#features" className="hidden sm:inline text-content-secondary hover:text-content transition-colors">Features</a>
+          <a href="#how-it-works" className="hidden sm:inline text-content-secondary hover:text-content transition-colors">How it Works</a>
+          {!isAuthenticated && (
+            <>
+              <Link to="/login" className="text-content-secondary hover:text-content transition-colors">
+                Log In
+              </Link>
+              <Link to="/register">
+                <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+                  Create Account
+                </Button>
+              </Link>
+            </>
+          )}
           <Link to="/app">
             <Button variant="primary">
               Launch Console
@@ -49,9 +64,19 @@ export function Landing() {
                 <ChevronRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
-            <Button variant="outline" className="h-12 px-8 text-base bg-surface-1">
-              Read Documentation
-            </Button>
+            {!isAuthenticated ? (
+              <Link to="/register">
+                <Button variant="outline" className="h-12 px-8 text-base bg-surface-1">
+                  Create Free Account
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/app/settings">
+                <Button variant="outline" className="h-12 px-8 text-base bg-surface-1">
+                  Workspace Settings
+                </Button>
+              </Link>
+            )}
           </div>
         </section>
 

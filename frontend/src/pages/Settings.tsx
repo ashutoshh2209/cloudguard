@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
@@ -8,7 +9,7 @@ import { WorkspaceMemberManager } from '../components/WorkspaceMemberManager';
 import { useAuth } from '../context/AuthContext';
 
 export function Settings() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col animate-in fade-in duration-300">
@@ -38,16 +39,32 @@ export function Settings() {
 
         <TabsContent value="account">
           <div className="space-y-6">
+            {!isAuthenticated && (
+              <Card className="border-accent-border bg-accent-subtle/40">
+                <h3 className="text-lg font-bold text-content mb-2">Guest Preview Mode</h3>
+                <p className="text-[14px] text-content-secondary mb-4">
+                  You are currently exploring CloudGuard without signing in. Create an account or log in to save your profile, create custom workspaces, and connect your AWS environment.
+                </p>
+                <div className="flex items-center gap-3">
+                  <Link to="/login">
+                    <Button variant="outline">Log In</Button>
+                  </Link>
+                  <Link to="/register">
+                    <Button variant="primary">Create Account</Button>
+                  </Link>
+                </div>
+              </Card>
+            )}
             <Card>
               <h3 className="text-lg font-bold text-content mb-4">Profile Information</h3>
               <div className="space-y-4 max-w-md">
                 <div>
                   <label className="block text-[13px] font-bold text-content-secondary mb-1.5">Full Name</label>
-                  <input type="text" key={user?.name} defaultValue={user?.name || "Admin User"} className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-[14px] text-content focus:outline-none focus:border-accent-9/50" />
+                  <input type="text" key={user?.name} defaultValue={user?.name || "Guest User"} className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-[14px] text-content focus:outline-none focus:border-accent-9/50" />
                 </div>
                 <div>
                   <label className="block text-[13px] font-bold text-content-secondary mb-1.5">Email Address</label>
-                  <input type="email" key={user?.email} defaultValue={user?.email || "admin@example.com"} className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-[14px] text-content focus:outline-none focus:border-accent-9/50" />
+                  <input type="email" key={user?.email} defaultValue={user?.email || "guest@cloudguard.io"} className="w-full bg-surface-1 border border-line rounded-lg px-3 py-2 text-[14px] text-content focus:outline-none focus:border-accent-9/50" />
                 </div>
                 <Button variant="primary" className="mt-4">Save Changes</Button>
               </div>

@@ -89,6 +89,20 @@ export function ScanHistory() {
       ),
     },
     {
+      header: 'Source',
+      cell: (item: SecurityScan) => (
+        item.is_simulated ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+            Simulated Demo
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            Live AWS
+          </span>
+        )
+      ),
+    },
+    {
       header: 'Date',
       cell: (item: SecurityScan) => (
         <div className="flex items-center gap-2 text-content-secondary">

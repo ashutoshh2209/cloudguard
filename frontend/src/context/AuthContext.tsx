@@ -68,30 +68,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const mapped: Workspace[] = list.map((w: WorkspaceItem) => ({
         id: w.id,
         name: w.name,
-        role: w.current_user_role || 'MEMBER',
+        role: w.current_user_role || 'OWNER',
         owner_id: w.owner_id,
-        member_count: w.member_count,
+        member_count: w.member_count ?? 1,
       }));
 
       setWorkspaces(mapped);
 
-      const targetId = preferredWorkspaceId || localStorage.getItem('cloudguard_active_workspace_id');
-      const selected = mapped.find(w => w.id === targetId) || mapped[0];
+      const savedId = localStorage.getItem('cloudguard_active_workspace_id');
+      const targetId = preferredWorkspaceId || savedId;
+      const selected =
+        (targetId ? mapped.find(w => w.id === targetId) : undefined) ||
+        mapped.find(w => w.name === 'Personal Workspace' && (w.role === 'OWNER' || w.role === 'ADMIN')) ||
+        mapped.find(w => w.role === 'OWNER' || w.role === 'ADMIN') ||
+        mapped[0] ||
+        null;
 
       if (selected) {
         setActiveWorkspace(selected);
         localStorage.setItem('cloudguard_active_workspace_id', selected.id);
       } else {
         setActiveWorkspace(null);
+        localStorage.removeItem('cloudguard_active_workspace_id');
       }
 
       return mapped;
     } catch (err) {
+      console.error('Failed to load workspaces for user:', err);
       setWorkspaces([]);
       setActiveWorkspace(null);
       return [];
     }
   }, []);
+
+  // Ensure activeWorkspace stays synchronized whenever user has loaded workspaces
+  useEffect(() => {
+    if (user && workspaces.length > 0) {
+      const currentValid = activeWorkspace && workspaces.some(w => w.id === activeWorkspace.id);
+      if (!currentValid) {
+        const savedId = localStorage.getItem('cloudguard_active_workspace_id');
+        const fallback =
+          (savedId ? workspaces.find(w => w.id === savedId) : undefined) ||
+          workspaces.find(w => w.name === 'Personal Workspace' && (w.role === 'OWNER' || w.role === 'ADMIN')) ||
+          workspaces[0];
+        if (fallback) {
+          setActiveWorkspace(fallback);
+          localStorage.setItem('cloudguard_active_workspace_id', fallback.id);
+        }
+      }
+    }
+  }, [user, workspaces, activeWorkspace]);
 
   // Load current user and workspaces from real backend if token exists
   useEffect(() => {
@@ -200,33 +226,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const switchWorkspace = (workspaceId: string) => {
+  const switchWorkspace = useCallback((workspaceId: string) => {
     const found = workspaces.find(w => w.id === workspaceId);
     if (found) {
       setActiveWorkspace(found);
       localStorage.setItem('cloudguard_active_workspace_id', found.id);
     }
-  };
+  }, [workspaces]);
 
-  const createWorkspace = async (name: string): Promise<Workspace> => {
+  const createWorkspace = useCallback(async (name: string): Promise<Workspace> => {
     const created = await workspacesApi.createWorkspace(name);
     const newWs: Workspace = {
       id: created.id,
       name: created.name,
       role: created.current_user_role || 'OWNER',
       owner_id: created.owner_id,
-      member_count: created.member_count,
+      member_count: created.member_count ?? 1,
     };
-    const updated = [...workspaces, newWs];
-    setWorkspaces(updated);
+    setWorkspaces(prev => {
+      const exists = prev.some(w => w.id === newWs.id);
+      return exists ? prev.map(w => (w.id === newWs.id ? newWs : w)) : [...prev, newWs];
+    });
     setActiveWorkspace(newWs);
     localStorage.setItem('cloudguard_active_workspace_id', newWs.id);
     return newWs;
-  };
+  }, []);
 
-  const refreshWorkspaces = async () => {
+  const refreshWorkspaces = useCallback(async () => {
     await loadWorkspacesForUser(activeWorkspace?.id);
-  };
+  }, [loadWorkspacesForUser, activeWorkspace?.id]);
 
   return (
     <AuthContext.Provider
